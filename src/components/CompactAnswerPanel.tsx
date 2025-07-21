@@ -35,6 +35,9 @@ interface CompactAnswerPanelProps {
   isLastExercise?: boolean;
   cardId?: string;
   onRevealSolution?: () => void;
+  isReviewMode?: boolean;
+  userAnswer?: string;
+  onBackToActive?: () => void;
 }
 
 export default function CompactAnswerPanel({
@@ -49,7 +52,10 @@ export default function CompactAnswerPanel({
   onNext,
   isLastExercise = false,
   cardId,
-  onRevealSolution
+  onRevealSolution,
+  isReviewMode = false,
+  userAnswer,
+  onBackToActive
 }: CompactAnswerPanelProps) {
   const [answer, setAnswer] = useState('');
   const [showNumpad, setShowNumpad] = useState(false);
@@ -89,6 +95,13 @@ export default function CompactAnswerPanel({
 
   const remainingAttempts = maxAttempts - attempts;
   const canSubmit = remainingAttempts > 0 && !showSolution;
+  
+  // Use userAnswer when in review mode
+  useEffect(() => {
+    if (isReviewMode && userAnswer !== undefined) {
+      setAnswer(userAnswer);
+    }
+  }, [isReviewMode, userAnswer]);
 
   // Update position on window resize
   useEffect(() => {
@@ -315,7 +328,7 @@ export default function CompactAnswerPanel({
                 onChange={(e) => setAnswer(e.target.value)}
                 placeholder="Escribe aquí"
                 className="text-lg font-mono h-10 pr-10"
-                disabled={showSolution}
+                disabled={showSolution || isReviewMode}
                 autoFocus
               />
               <Calculator 
@@ -324,19 +337,21 @@ export default function CompactAnswerPanel({
               />
             </div>
             
-            <Button
-              type="submit"
-              disabled={!canSubmit || !answer.trim()}
-              className="w-full h-9"
-              size="sm"
-            >
-              <Send className="mr-2 h-3 w-3" />
-              Verificar
-            </Button>
+            {!isReviewMode && (
+              <Button
+                type="submit"
+                disabled={!canSubmit || !answer.trim()}
+                className="w-full h-9"
+                size="sm"
+              >
+                <Send className="mr-2 h-3 w-3" />
+                Verificar
+              </Button>
+            )}
           </form>
 
           {/* Reveal answer button when out of attempts */}
-          {remainingAttempts === 0 && !showSolution && onRevealSolution && (
+          {remainingAttempts === 0 && !showSolution && onRevealSolution && !isReviewMode && (
             <Button
               onClick={onRevealSolution}
               variant="outline"
@@ -435,8 +450,20 @@ export default function CompactAnswerPanel({
             </div>
           )}
 
+          {/* Back to Active button for review mode */}
+          {isReviewMode && onBackToActive && (
+            <Button 
+              onClick={onBackToActive}
+              className="w-full h-10 bg-orange-500 hover:bg-orange-600 text-white"
+              size="sm"
+            >
+              <ChevronRight className="mr-2 h-4 w-4" />
+              Volver al Activo
+            </Button>
+          )}
+
           {/* Numpad */}
-          {showNumpad && !showSolution && (
+          {showNumpad && !showSolution && !isReviewMode && (
             <>
               {/* Keep numpad open preference */}
               <div className="mt-2 mb-1">

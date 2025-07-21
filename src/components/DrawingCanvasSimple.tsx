@@ -49,6 +49,10 @@ interface DrawingCanvasSimpleProps {
   topic?: string;
   difficulty?: number;
   onRevealSolution?: () => void;
+  // Review mode props
+  isReviewMode?: boolean;
+  userAnswer?: string;
+  onBackToActive?: () => void;
 }
 
 const COLORS = [
@@ -74,7 +78,10 @@ export default function DrawingCanvasSimple({
   correctAnswers = 0,
   topic,
   difficulty,
-  onRevealSolution
+  onRevealSolution,
+  isReviewMode = false,
+  userAnswer,
+  onBackToActive
 }: DrawingCanvasSimpleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [lines, setLines] = useState<Line[]>([]);
@@ -386,6 +393,9 @@ export default function DrawingCanvasSimple({
           isLastExercise={isLastExercise}
           cardId={cardId}
           onRevealSolution={onRevealSolution}
+          isReviewMode={isReviewMode}
+          userAnswer={userAnswer}
+          onBackToActive={onBackToActive}
         />
       )}
     </div>

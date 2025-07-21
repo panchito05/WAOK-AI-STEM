@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft,
+  ArrowRight,
   RotateCcw,
   Target,
   Trophy,
@@ -55,6 +56,15 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   // Adaptive difficulty states
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
   const [currentDifficulty, setCurrentDifficulty] = useState(card.difficulty);
+  
+  // Navigation and review mode states
+  const [userAnswers, setUserAnswers] = useState<Record<number, {
+    answer: string;
+    isCorrect: boolean;
+    attempts: number;
+  }>>({});
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0); // índice del problema activo (no en revisión)
 
   // Load exercises once on mount
   useEffect(() => {
@@ -177,6 +187,16 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
       if (result.data) {
         setFeedback(result.data);
         
+        // Guardar respuesta del usuario
+        setUserAnswers(prev => ({
+          ...prev,
+          [currentIndex]: {
+            answer: answer,
+            isCorrect: result.data.isCorrect,
+            attempts: newAttempts
+          }
+        }));
+        
         if (result.data.isCorrect) {
           setCorrectAnswers(prev => prev + 1);
           setConsecutiveCorrect(prev => prev + 1);
@@ -239,10 +259,43 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
     setShowSolution(true);
     setHint(currentExercise?.explanation || '');
     
+    // Guardar que el usuario reveló la solución (respuesta incorrecta)
+    setUserAnswers(prev => ({
+      ...prev,
+      [currentIndex]: {
+        answer: '',
+        isCorrect: false,
+        attempts: attempts + 1
+      }
+    }));
+    
     // Add compensation exercise if enabled
     if (card.autoCompensation) {
       addCompensationExercise();
     }
+  };
+
+  const handlePreviousExercise = () => {
+    if (!isReviewMode) {
+      setActiveIndex(currentIndex);
+    }
+    setIsReviewMode(true);
+    setCurrentIndex(currentIndex - 1);
+    // Limpiar estados temporales
+    setAttempts(0);
+    setShowSolution(true);
+    setFeedback(undefined);
+    setHint('');
+  };
+
+  const handleBackToActive = () => {
+    setIsReviewMode(false);
+    setCurrentIndex(activeIndex);
+    // Restaurar estados del problema activo
+    setShowSolution(false);
+    setAttempts(0);
+    setFeedback(undefined);
+    setHint('');
   };
 
   const handleNextExercise = () => {
@@ -323,9 +376,30 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
           Volver a mis tarjetas
         </Button>
         <div className="flex items-center gap-4">
+          {isReviewMode && currentIndex < activeIndex - 1 && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                setCurrentIndex(currentIndex + 1);
+                setAttempts(0);
+                setShowSolution(true);
+                setFeedback(undefined);
+                setHint('');
+              }}
+            >
+              Siguiente
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
           <Badge variant="secondary">
             {currentIndex + 1} / {exercises.length}
           </Badge>
+          {isReviewMode && (
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+              Modo Revisión
+            </Badge>
+          )}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Trophy className="h-4 w-4" />
             <span>{correctAnswers} correctas</span>
@@ -405,6 +479,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
                     topic={card.topic}
                     difficulty={card.adaptiveDifficulty ? currentDifficulty : card.difficulty}
                     onRevealSolution={handleRevealSolution}
+                    isReviewMode={isReviewMode}
+                    userAnswer={userAnswers[currentIndex]?.answer}
+                    onBackToActive={handleBackToActive}
                   />
                 </>
               );
@@ -428,6 +505,11 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
             autoCompensation={card.autoCompensation}
             cardId={card.id}
             hasModalOpen={hasModalOpen}
+            isReviewMode={isReviewMode}
+            userAnswer={userAnswers[currentIndex]?.answer}
+            onBackToActive={handleBackToActive}
+            currentIndex={currentIndex}
+            onPrevious={handlePreviousExercise}
           />
         </div>
       </div>

@@ -26,7 +26,8 @@ import {
   Lightbulb,
   CheckCircle,
   XCircle,
-  Calculator
+  Calculator,
+  ArrowLeft
 } from 'lucide-react';
 
 interface AnswerPanelProps {
@@ -46,6 +47,11 @@ interface AnswerPanelProps {
   };
   cardId: string;
   hasModalOpen?: boolean;
+  isReviewMode?: boolean;
+  userAnswer?: string;
+  onBackToActive?: () => void;
+  currentIndex?: number;
+  onPrevious?: () => void;
 }
 
 export default function AnswerPanel({
@@ -62,12 +68,24 @@ export default function AnswerPanel({
   feedback,
   cardId,
   hasModalOpen = false,
+  isReviewMode = false,
+  userAnswer,
+  onBackToActive,
+  currentIndex = 0,
+  onPrevious,
 }: AnswerPanelProps) {
   const [answer, setAnswer] = useState('');
   const [showNumpad, setShowNumpad] = useState(true);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  
+  // Use userAnswer when in review mode
+  useEffect(() => {
+    if (isReviewMode && userAnswer !== undefined) {
+      setAnswer(userAnswer);
+    }
+  }, [isReviewMode, userAnswer]);
 
   // Load auto-advance preference on mount
   useEffect(() => {
@@ -164,7 +182,7 @@ export default function AnswerPanel({
                 onChange={(e) => setAnswer(e.target.value)}
                 placeholder="Escribe tu respuesta aquí"
                 className="text-2xl font-mono h-14 pr-12"
-                disabled={showSolution}
+                disabled={showSolution || isReviewMode}
                 autoFocus
               />
               <Calculator 
@@ -173,27 +191,42 @@ export default function AnswerPanel({
               />
             </div>
 
-            <div className="flex gap-2">
-              {!showSolution && (
+            {!isReviewMode && (
+              <div className="flex gap-2">
+                {currentIndex > 0 && onPrevious && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onPrevious}
+                    size="sm"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Anterior
+                  </Button>
+                )}
+                
+                {!showSolution && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowConfirmDialog(true)}
+                    size="sm"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Revelar
+                  </Button>
+                )}
+                
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowConfirmDialog(true)}
+                  type="submit"
+                  disabled={!canSubmit || !answer.trim()}
+                  className="flex-1"
                 >
-                  <Eye className="mr-2 h-4 w-4" />
-                  Revelar Respuesta
+                  <Send className="mr-2 h-4 w-4" />
+                  Verificar
                 </Button>
-              )}
-              
-              <Button
-                type="submit"
-                disabled={!canSubmit || !answer.trim()}
-                className="flex-1"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Verificar Respuesta
-              </Button>
-            </div>
+              </div>
+            )}
           </form>
 
           {/* Feedback */}
@@ -291,8 +324,24 @@ export default function AnswerPanel({
         </CardContent>
       </Card>
 
+      {/* Back to Active button for review mode */}
+      {isReviewMode && onBackToActive && (
+        <Card>
+          <CardContent className="pt-6">
+            <Button 
+              onClick={onBackToActive}
+              className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white"
+              size="lg"
+            >
+              <ChevronRight className="mr-2 h-5 w-5" />
+              Volver al Activo
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Numpad */}
-      {showNumpad && !showSolution && (
+      {showNumpad && !showSolution && !isReviewMode && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Teclado Numérico</CardTitle>
