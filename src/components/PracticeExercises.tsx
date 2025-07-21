@@ -43,16 +43,22 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+type Exercise = {
+  problem: string;
+  solution: string;
+  explanation: string;
+};
+
 export default function PracticeExercises() {
   const [isLoading, setIsLoading] = useState(false);
-  const [exercises, setExercises] = useState<string[]>([]);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       level: 'beginner',
-      topic: 'Addition',
+      topic: '',
     },
   });
 
@@ -121,7 +127,7 @@ export default function PracticeExercises() {
                   <FormItem>
                     <FormLabel>Topic</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Subtraction, Fractions" {...field} />
+                      <Input placeholder="e.g., Fracciones, Ecuaciones, Propiedades conmutativas" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -135,20 +141,6 @@ export default function PracticeExercises() {
                 <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-8 w-full" />
               </div>
-            )}
-            {exercises.length > 0 && (
-                 <Accordion type="single" collapsible className="w-full" defaultValue="item-1">
-                 <AccordionItem value="item-1">
-                   <AccordionTrigger className="text-base font-semibold">Your Exercises</AccordionTrigger>
-                   <AccordionContent>
-                     <ul className="space-y-3 pl-4 list-decimal list-inside text-base">
-                       {exercises.map((ex, index) => (
-                         <li key={index} className="rounded-md bg-background p-2">{ex}</li>
-                       ))}
-                     </ul>
-                   </AccordionContent>
-                 </AccordionItem>
-               </Accordion>
             )}
           </CardContent>
           <CardFooter>
@@ -168,6 +160,33 @@ export default function PracticeExercises() {
           </CardFooter>
         </form>
       </Form>
+      
+      {exercises.length > 0 && (
+        <CardContent className="pt-0">
+          <h3 className="font-semibold mb-3">Your Exercises:</h3>
+          <Accordion type="single" collapsible className="w-full">
+            {exercises.map((exercise, index) => (
+              <AccordionItem key={index} value={`item-${index}`}>
+                <AccordionTrigger>
+                  <span className="text-left">
+                    Exercise {index + 1}: {exercise.problem}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3">
+                  <div className="bg-green-50 p-3 rounded-md">
+                    <p className="font-semibold text-green-700">Solution:</p>
+                    <p className="text-green-600">{exercise.solution}</p>
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <p className="font-semibold text-blue-700">Explanation:</p>
+                    <p className="text-blue-600">{exercise.explanation}</p>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </CardContent>
+      )}
     </Card>
   );
 }

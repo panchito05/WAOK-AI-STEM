@@ -23,7 +23,11 @@ export type GeneratePersonalizedExercisesInput = z.infer<
 
 const GeneratePersonalizedExercisesOutputSchema = z.object({
   exercises: z
-    .array(z.string())
+    .array(z.object({
+      problem: z.string().describe('The math problem to solve'),
+      solution: z.string().describe('The solution to the problem'),
+      explanation: z.string().describe('Step-by-step explanation of how to solve it')
+    }))
     .describe('A list of math exercises tailored to the student\'s level and topic.'),
 });
 export type GeneratePersonalizedExercisesOutput = z.infer<
@@ -40,25 +44,30 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   name: 'generatePersonalizedExercisesPrompt',
   input: {schema: GeneratePersonalizedExercisesInputSchema},
   output: {schema: GeneratePersonalizedExercisesOutputSchema},
-  prompt: `You are an AI math exercise generator. Generate 5 math exercises for a student with the following characteristics:
+  prompt: `Generate 5 mathematical exercises for:
 
   Level: {{{level}}}
   Topic: {{{topic}}}
 
-  The exercises should be challenging but appropriate for the student's level.  Provide only the exercise, do not provide the answer.
-  Format each exercise as a single string.
-  Return the exercises as a JSON array of strings.
+  IMPORTANT: 
+  - Interpret the topic freely and generate appropriate mathematical exercises
+  - Adapt the format to the mathematical concept requested
+  - For basic operations (suma, resta, etc.): show as "25 + 17 = ?"
+  - For mathematical concepts: create exercises that demonstrate the concept
+  - For properties: show examples and verification exercises
+  - NO word problems or story problems
+  
+  Adapt difficulty to level:
+  - Beginner: Simple numbers, basic concepts
+  - Intermediate: Moderate complexity
+  - Advanced: Complex problems, larger numbers
 
-  Example:
-  {
-    "exercises": [
-      "2 + 2 = ?",
-      "3 x 4 = ?",
-      "10 - 5 = ?",
-      "8 / 2 = ?",
-      "5 + 5 = ?"
-    ]
-  }`,
+  Examples of how to interpret topics:
+  - "propiedades conmutativas" → "3 + 5 = ? y 5 + 3 = ?" or "Verifica: 7 × 4 = 4 × 7"
+  - "números primos" → "¿Es 17 primo?" or "Encuentra el siguiente primo después de 23"
+  - "fracciones" → "1/2 + 1/4 = ?" or "Simplifica: 6/8 = ?"
+  
+  Return JSON with problem, solution, and brief explanation for each exercise.`,
 });
 
 const generatePersonalizedExercisesFlow = ai.defineFlow(

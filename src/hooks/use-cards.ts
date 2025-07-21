@@ -1,0 +1,174 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { PracticeCard, cardStorage, DEFAULT_CARDS } from '@/lib/storage';
+import { useToast } from '@/hooks/use-toast';
+import { exerciseCache } from '@/lib/exercise-cache';
+
+export function useCards() {
+  const [cards, setCards] = useState<PracticeCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Load cards on mount
+  useEffect(() => {
+    loadCards();
+  }, []);
+
+  const loadCards = useCallback(() => {
+    setIsLoading(true);
+    try {
+      const storedCards = cardStorage.getAll();
+      
+      // If no cards exist, create default ones
+      if (storedCards.length === 0) {
+        const newCards: PracticeCard[] = [];
+        DEFAULT_CARDS.forEach(card => {
+          const newCard = cardStorage.create(card);
+          if (newCard) {
+            newCards.push(newCard);
+            // Preload exercises for default cards
+            exerciseCache.preloadExercises({
+              id: newCard.id,
+              topic: newCard.topic,
+              difficulty: newCard.difficulty,
+              customInstructions: newCard.customInstructions
+            });
+          }
+        });
+        setCards(cardStorage.getAll());
+      } else {
+        setCards(storedCards);
+        
+        // Preload exercises for ALL existing cards
+        console.log('Checking exercise pools for all cards...');
+        storedCards.forEach(async (card) => {
+          const poolStatus = exerciseCache.getPoolStatus(card.id);
+          if (poolStatus.size < 3) {
+            console.log(`Card "${card.name}" needs preloading (current pool: ${poolStatus.size})`);
+            await exerciseCache.preloadExercises({
+              id: card.id,
+              topic: card.topic,
+              difficulty: card.difficulty,
+              customInstructions: card.customInstructions
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading cards:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar las tarjetas',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  const createCard = useCallback((card: Omit<PracticeCard, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newCard = cardStorage.create(card);
+      setCards(cardStorage.getAll());
+      toast({
+        title: 'Tarjeta creada',
+        description: `La tarjeta "${newCard.name}" se ha creado correctamente`,
+      });
+      return newCard;
+    } catch (error) {
+      console.error('Error creating card:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo crear la tarjeta',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [toast]);
+
+  const updateCard = useCallback((id: string, updates: Partial<Omit<PracticeCard, 'id' | 'createdAt'>>) => {
+    try {
+      const updatedCard = cardStorage.update(id, updates);
+      if (updatedCard) {
+        setCards(cardStorage.getAll());
+        toast({
+          title: 'Tarjeta actualizada',
+          description: `La tarjeta "${updatedCard.name}" se ha actualizado`,
+        });
+      }
+      return updatedCard;
+    } catch (error) {
+      console.error('Error updating card:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar la tarjeta',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [toast]);
+
+  const deleteCard = useCallback((id: string) => {
+    try {
+      const card = cardStorage.getById(id);
+      const success = cardStorage.delete(id);
+      if (success) {
+        // Clear the exercise cache for this card
+        exerciseCache.clearPool(id);
+        
+        setCards(cardStorage.getAll());
+        toast({
+          title: 'Tarjeta eliminada',
+          description: card ? `La tarjeta "${card.name}" se ha eliminado` : 'Tarjeta eliminada',
+        });
+      }
+      return success;
+    } catch (error) {
+      console.error('Error deleting card:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar la tarjeta',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [toast]);
+
+  const toggleFavorite = useCallback((id: string) => {
+    try {
+      const updatedCard = cardStorage.toggleFavorite(id);
+      if (updatedCard) {
+        setCards(cardStorage.getAll());
+        toast({
+          title: updatedCard.isFavorite ? 'Agregado a favoritos' : 'Removido de favoritos',
+          description: `"${updatedCard.name}" ${updatedCard.isFavorite ? 'es ahora favorito' : 'ya no es favorito'}`,
+        });
+      }
+      return updatedCard;
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar el favorito',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [toast]);
+
+  const getCardById = useCallback((id: string) => {
+    return cards.find(card => card.id === id) || null;
+  }, [cards]);
+
+  return {
+    cards,
+    isLoading,
+    createCard,
+    updateCard,
+    deleteCard,
+    toggleFavorite,
+    getCardById,
+    refreshCards: loadCards,
+  };
+}
