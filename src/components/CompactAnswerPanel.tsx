@@ -56,7 +56,7 @@ export default function CompactAnswerPanel({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted, setIsMounted] = useState(true);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [keepNumpadOpen, setKeepNumpadOpen] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -68,20 +68,20 @@ export default function CompactAnswerPanel({
     const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
     
     if (isMobile) {
-      // Center horizontally at bottom for mobile
+      // Top center for mobile
       return { 
         x: (window.innerWidth - 350) / 2, // Center horizontally
-        y: window.innerHeight - 400 // Near bottom
+        y: 100 // Top position
       };
     } else if (isTablet) {
-      // Bottom right for tablet
+      // Top right for tablet
       return { 
         x: window.innerWidth - 370,
-        y: window.innerHeight - 350
+        y: 100 // Top position
       };
     } else {
-      // Bottom right for desktop
-      return { x: window.innerWidth - 370, y: window.innerHeight - 300 };
+      // Top right for desktop
+      return { x: window.innerWidth - 370, y: 100 }; // Top position
     }
   };
   
@@ -104,10 +104,10 @@ export default function CompactAnswerPanel({
     return () => window.removeEventListener('resize', handleResize);
   }, [isDragging]);
 
-  // Animate on mount
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  // No animation needed - panel appears instantly
+  // useEffect(() => {
+  //   setIsMounted(true);
+  // }, []);
 
   // Adjust position when numpad is shown/hidden to keep panel in viewport
   useEffect(() => {
@@ -135,7 +135,7 @@ export default function CompactAnswerPanel({
     // Small delay to allow DOM to update
     const timer = setTimeout(adjustPositionForNumpad, 50);
     return () => clearTimeout(timer);
-  }, [showNumpad, isDragging, position.y, showSolution, solution]);
+  }, [showNumpad, isDragging, showSolution, solution]);
 
   // Load user preferences on mount
   useEffect(() => {
@@ -274,10 +274,9 @@ export default function CompactAnswerPanel({
     <div
       ref={panelRef}
       className={cn(
-        "fixed z-50 transition-all duration-300",
+        "fixed z-50",
         isDragging ? "cursor-grabbing" : "",
         isHovered || isDragging ? "opacity-100" : "opacity-80",
-        isMounted ? "translate-y-0 opacity-80" : "translate-y-4 opacity-0",
         className
       )}
       style={{
@@ -290,7 +289,7 @@ export default function CompactAnswerPanel({
       onMouseDown={handleMouseDown}
     >
       <Card className={cn(
-        "shadow-lg border-2 bg-white/95 backdrop-blur-sm transition-transform duration-200",
+        "shadow-lg border-2 bg-white/95 backdrop-blur-sm",
         isHovered && !isDragging ? "scale-105" : "scale-100"
       )}>
         {/* Drag handle */}
