@@ -117,7 +117,7 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
                 <Button
                   variant="default"
                   size="lg"
-                  className={`w-full h-auto py-6 px-6 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-lg ${
+                  className={`w-full h-auto py-6 px-6 bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white shadow-lg ${
                     cards.filter(c => c.isFavorite).length === 0 ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   disabled={cards.filter(c => c.isFavorite).length === 0}

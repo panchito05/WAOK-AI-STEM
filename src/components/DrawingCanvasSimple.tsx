@@ -32,6 +32,13 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
   const [currentColor, setCurrentColor] = useState(COLORS[0]);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
   const [canvasSize, setCanvasSize] = useState({ width: 0, height });
+  
+  // Estados para drag & drop del texto
+  const [textPosition, setTextPosition] = useState({ x: 0, y: 50 });
+  const [isDraggingText, setIsDraggingText] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [textBounds, setTextBounds] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [canvasWithoutText, setCanvasWithoutText] = useState<ImageData | null>(null);
 
   useEffect(() => {
     const updateSize = () => {
@@ -93,33 +100,54 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
     const textWidth = textMetrics.width;
     const padding = 30;
     const bgHeight = 50;
-    const bgY = 25;
+    
+    // Calculate position - center if first time (x is 0)
+    let bgX: number;
+    let bgY: number;
+    
+    if (textPosition.x === 0) {
+      // First time - center the text
+      bgX = (canvas.width - textWidth - padding * 2) / 2;
+      bgY = 25;
+      // Update text position for future use
+      setTextPosition({ x: bgX + (textWidth + padding * 2) / 2, y: bgY + bgHeight / 2 });
+    } else {
+      // Use existing position
+      bgX = textPosition.x - (textWidth + padding * 2) / 2;
+      bgY = textPosition.y - bgHeight / 2;
+    }
+    
+    // Update text bounds for click detection
+    setTextBounds({
+      x: bgX,
+      y: bgY,
+      width: textWidth + padding * 2,
+      height: bgHeight
+    });
     
     // Draw background with border
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.fillRect(
-      (canvas.width - textWidth - padding * 2) / 2, 
-      bgY, 
-      textWidth + padding * 2, 
-      bgHeight
-    );
+    ctx.fillRect(bgX, bgY, textWidth + padding * 2, bgHeight);
     
     // Draw border
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(
-      (canvas.width - textWidth - padding * 2) / 2, 
-      bgY, 
-      textWidth + padding * 2, 
-      bgHeight
-    );
+    ctx.strokeRect(bgX, bgY, textWidth + padding * 2, bgHeight);
     
     // Draw the operation text
     ctx.fillStyle = '#000000';
-    ctx.fillText(operationText, canvas.width / 2, bgY + bgHeight / 2);
+    ctx.fillText(operationText, textPosition.x === 0 ? canvas.width / 2 : textPosition.x, textPosition.y === 0 ? bgY + bgHeight / 2 : textPosition.y);
     
     // Restore context state
     ctx.restore();
+  };
+
+  // Function to check if mouse is over the text
+  const isMouseOverText = (x: number, y: number): boolean => {
+    return x >= textBounds.x &&
+           x <= textBounds.x + textBounds.width &&
+           y >= textBounds.y &&
+           y <= textBounds.y + textBounds.height;
   };
 
   useEffect(() => {
@@ -154,14 +182,10 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
   }, [operationText, canvasSize]);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
     let x, y;
     if ('touches' in e) {
       x = e.touches[0].clientX - rect.left;
@@ -171,20 +195,44 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
       y = e.clientY - rect.top;
     }
 
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+    // Check if click is on the text
+    if (isMouseOverText(x, y)) {
+      // Start dragging text
+      setIsDraggingText(true);
+      setDragOffset({
+        x: x - textPosition.x,
+        y: y - textPosition.y
+      });
+      canvas.style.cursor = 'grabbing';
+      
+      // Capture canvas content without text
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Clear only the text area temporarily
+        ctx.clearRect(textBounds.x - 5, textBounds.y - 5, textBounds.width + 10, textBounds.height + 10);
+        
+        // Capture the canvas without text
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        setCanvasWithoutText(imageData);
+        
+        // Redraw the text
+        drawOperationText(ctx, canvas);
+      }
+    } else {
+      // Start drawing
+      setIsDrawing(true);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
     let x, y;
     if ('touches' in e) {
       x = e.touches[0].clientX - rect.left;
@@ -194,21 +242,73 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
       y = e.clientY - rect.top;
     }
 
-    if (tool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = 20;
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = currentColor;
-      ctx.lineWidth = 3;
-    }
+    if (isDraggingText) {
+      // Update text position while dragging
+      let newX = x - dragOffset.x;
+      let newY = y - dragOffset.y;
+      
+      // Limit text position within canvas bounds
+      const padding = 60; // Account for text box padding
+      newX = Math.max(padding, Math.min(canvas.width - padding, newX));
+      newY = Math.max(25, Math.min(canvas.height - 25, newY));
+      
+      setTextPosition({ x: newX, y: newY });
+      
+      // Redraw canvas with new text position
+      const ctx = canvas.getContext('2d');
+      if (ctx && canvasWithoutText) {
+        // Clear entire canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Restore the canvas content WITHOUT text
+        ctx.putImageData(canvasWithoutText, 0, 0);
+        
+        // Draw text at new position
+        drawOperationText(ctx, canvas);
+      }
+    } else if (isDrawing) {
+      // Normal drawing
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    ctx.lineTo(x, y);
-    ctx.stroke();
+      if (tool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = 20;
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = 3;
+      }
+
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
   };
 
   const stopDrawing = () => {
     setIsDrawing(false);
+    setIsDraggingText(false);
+    // Clear the saved canvas data after dragging is done
+    setCanvasWithoutText(null);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Only handle cursor changes when not drawing or dragging
+    if (isDrawing || isDraggingText) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Change cursor based on whether mouse is over text
+    if (isMouseOverText(x, y)) {
+      canvas.style.cursor = 'grab';
+    } else {
+      canvas.style.cursor = tool === 'eraser' ? 'grab' : 'crosshair';
+    }
   };
 
   const handleClear = () => {
@@ -217,6 +317,8 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Reset text position to center
+        setTextPosition({ x: 0, y: 50 });
         // Redraw operation text after clearing
         drawOperationText(ctx, canvas);
       }
@@ -305,15 +407,18 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
           ref={canvasRef}
           width={canvasSize.width}
           height={canvasSize.height}
-          className="absolute top-0 left-0 cursor-crosshair touch-none"
+          className="absolute top-0 left-0 touch-none"
           onMouseDown={startDrawing}
-          onMouseMove={draw}
+          onMouseMove={(e) => {
+            draw(e);
+            handleMouseMove(e);
+          }}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
-          style={{ cursor: tool === 'eraser' ? 'grab' : 'crosshair' }}
+          style={{ cursor: isDraggingText ? 'grabbing' : 'auto' }}
         />
       </Card>
 
