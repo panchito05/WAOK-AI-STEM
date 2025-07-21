@@ -18,7 +18,7 @@ claude --dangerously-skip-permissions
 ### Prompt: Confirmación de Entendimiento
 ```
 Antes de hacer cualquier cambio, explícame en términos simples:
-1. ¿Qué entendiste que quiero hacer? importante no hagas ningun cambio hasta que me confirmes que entendiste lo que quiero hacer.
+1. ¿Qué entiendes que quiero hacer? importante no hagas ningun cambio hasta que me confirmes que entendiste lo que quiero hacer.
 2. ¿Cuál es el resultado esperado después del cambio?
 3. ¿Que opinas tienes alguna recomendacion o sugerencia basado en lo que entendiste hasta ahora o te parece bien hacerlo asi como te dije?
 

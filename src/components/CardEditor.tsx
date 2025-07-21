@@ -14,7 +14,6 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Form,
   FormControl,
@@ -32,7 +31,7 @@ import {
   Loader2,
   Plus
 } from 'lucide-react';
-import { correctSpellingAction, getExampleByDifficultyAction } from '@/app/actions';
+import { correctSpellingAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { exerciseCache } from '@/lib/exercise-cache';
 import LevelExamplesDialog from '@/components/LevelExamplesDialog';
@@ -59,8 +58,6 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const { createCard, updateCard } = useCards();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [exampleProblem, setExampleProblem] = useState<string>('');
-  const [loadingExample, setLoadingExample] = useState(false);
   const [correctedTopic, setCorrectedTopic] = useState<string>('');
   const [checkingSpelling, setCheckingSpelling] = useState(false);
   const [examplesDialogOpen, setExamplesDialogOpen] = useState(false);
@@ -110,26 +107,6 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
     return () => clearTimeout(timer);
   }, [topic]);
 
-  // Get example when difficulty or topic changes
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (topic && topic.length > 2) {
-        setLoadingExample(true);
-        try {
-          const result = await getExampleByDifficultyAction(topic, difficulty);
-          if (result.data) {
-            setExampleProblem(result.data);
-          }
-        } catch (error) {
-          console.error('Error getting example:', error);
-        } finally {
-          setLoadingExample(false);
-        }
-      }
-    }, 500); // Debounce 500ms
-
-    return () => clearTimeout(timer);
-  }, [difficulty, topic]);
 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
@@ -355,15 +332,38 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
             <div className="rounded-lg border bg-muted/50 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Ejemplo de ejercicio:</span>
+                <span className="text-sm font-medium">Ejemplos del nivel {difficulty}:</span>
               </div>
-              {loadingExample ? (
-                <Skeleton className="h-6 w-48" />
-              ) : exampleProblem ? (
-                <p className="font-mono text-lg">{exampleProblem}</p>
+              {structuredExamples[difficulty]?.length > 0 ? (
+                <div className="space-y-3">
+                  {structuredExamples[difficulty].slice(0, 3).map((example, index) => (
+                    <div key={index} className="space-y-1">
+                      <p className="font-mono text-base">{example.problem}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Respuesta: {example.solution}
+                      </p>
+                    </div>
+                  ))}
+                  {structuredExamples[difficulty].length > 3 && (
+                    <p className="text-xs text-muted-foreground">
+                      y {structuredExamples[difficulty].length - 3} ejemplo{structuredExamples[difficulty].length - 3 !== 1 ? 's' : ''} más...
+                    </p>
+                  )}
+                </div>
+              ) : levelExamples[difficulty]?.length > 0 ? (
+                <div className="space-y-2">
+                  {levelExamples[difficulty].slice(0, 3).map((example, index) => (
+                    <p key={index} className="font-mono text-base">{example}</p>
+                  ))}
+                  {levelExamples[difficulty].length > 3 && (
+                    <p className="text-xs text-muted-foreground">
+                      y {levelExamples[difficulty].length - 3} ejemplo{levelExamples[difficulty].length - 3 !== 1 ? 's' : ''} más...
+                    </p>
+                  )}
+                </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Ingresa un tema para ver un ejemplo
+                  No hay ejemplos para este nivel. Haz clic en "Ejemplos" para agregar.
                 </p>
               )}
             </div>
