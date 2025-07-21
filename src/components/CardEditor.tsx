@@ -29,7 +29,8 @@ import {
   Sparkles,
   AlertCircle,
   Loader2,
-  Plus
+  Plus,
+  Pencil
 } from 'lucide-react';
 import { correctSpellingAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -67,6 +68,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const [structuredExamples, setStructuredExamples] = useState<{ [level: number]: StructuredExample[] }>(
     card?.structuredExamples || {}
   );
+  const [editingExample, setEditingExample] = useState<{ index: number; example: StructuredExample } | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -281,26 +283,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
               name="difficulty"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center justify-between mb-2">
-                    <FormLabel>Nivel de Dificultad</FormLabel>
-                    <div className="flex items-center gap-2">
-                      {(structuredExamples[field.value]?.length > 0 || levelExamples[field.value]?.length > 0) && (
-                        <Badge variant="outline" className="text-xs">
-                          {structuredExamples[field.value]?.length || levelExamples[field.value]?.length} ejemplo{(structuredExamples[field.value]?.length || levelExamples[field.value]?.length) !== 1 ? 's' : ''}
-                        </Badge>
-                      )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setExamplesDialogOpen(true)}
-                        className="h-7 px-2"
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Ejemplos
-                      </Button>
-                    </div>
-                  </div>
+                  <FormLabel>Nivel de Dificultad</FormLabel>
                   <FormControl>
                     <div className="space-y-3">
                       <Slider
@@ -337,11 +320,25 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
               {structuredExamples[difficulty]?.length > 0 ? (
                 <div className="space-y-3">
                   {structuredExamples[difficulty].slice(0, 3).map((example, index) => (
-                    <div key={index} className="space-y-1">
-                      <p className="font-mono text-base">{example.problem}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Respuesta: {example.solution}
-                      </p>
+                    <div key={index} className="flex items-start justify-between gap-2">
+                      <div className="space-y-1 flex-1">
+                        <p className="font-mono text-base">{example.problem}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Respuesta: {example.solution}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingExample({ index, example });
+                          setExamplesDialogOpen(true);
+                        }}
+                        className="h-8 w-8"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                   {structuredExamples[difficulty].length > 3 && (
@@ -363,9 +360,23 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No hay ejemplos para este nivel. Haz clic en "Ejemplos" para agregar.
+                  No hay ejemplos para este nivel.
                 </p>
               )}
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditingExample(null);
+                  setExamplesDialogOpen(true);
+                }}
+                className="h-8 px-3 mt-3 w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Ejemplos
+              </Button>
             </div>
 
             <FormField
@@ -492,10 +503,16 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       {/* Level Examples Dialog */}
       <LevelExamplesDialog
         open={examplesDialogOpen}
-        onOpenChange={setExamplesDialogOpen}
+        onOpenChange={(open) => {
+          setExamplesDialogOpen(open);
+          if (!open) {
+            setEditingExample(null);
+          }
+        }}
         level={difficulty}
         examples={levelExamples[difficulty] || []}
         structuredExamples={structuredExamples[difficulty]}
+        editingExample={editingExample}
         onUpdateExamples={(examples) => {
           setLevelExamples(prev => ({
             ...prev,
@@ -507,6 +524,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
             ...prev,
             [difficulty]: examples
           }));
+          setEditingExample(null);
         }}
       />
     </>

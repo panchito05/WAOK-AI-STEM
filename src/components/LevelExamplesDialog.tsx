@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ interface LevelExamplesDialogProps {
   level: number;
   examples: string[]; // Mantener para compatibilidad
   structuredExamples?: StructuredExample[]; // Nueva estructura
+  editingExample?: { index: number; example: StructuredExample } | null;
   onUpdateExamples: (examples: string[]) => void;
   onUpdateStructuredExamples?: (examples: StructuredExample[]) => void;
 }
@@ -35,6 +36,7 @@ export default function LevelExamplesDialog({
   level,
   examples,
   structuredExamples,
+  editingExample,
   onUpdateExamples,
   onUpdateStructuredExamples,
 }: LevelExamplesDialogProps) {
@@ -42,6 +44,20 @@ export default function LevelExamplesDialog({
   const [newSolution, setNewSolution] = useState('');
   const [newExplanation, setNewExplanation] = useState('');
   const { toast } = useToast();
+
+  // Pre-llenar campos cuando se está editando
+  useEffect(() => {
+    if (editingExample && open) {
+      setNewProblem(editingExample.example.problem);
+      setNewSolution(editingExample.example.solution);
+      setNewExplanation(editingExample.example.explanation || '');
+    } else if (!open) {
+      // Limpiar campos cuando se cierra el diálogo
+      setNewProblem('');
+      setNewSolution('');
+      setNewExplanation('');
+    }
+  }, [editingExample, open]);
 
   // Función para calcular automáticamente la solución
   const calculateSolution = (problem: string): string => {
@@ -132,14 +148,17 @@ export default function LevelExamplesDialog({
       return;
     }
 
-    const totalExamples = hasStructuredExamples ? currentExamples.length : legacyExamples.length;
-    if (totalExamples >= 10) {
-      toast({
-        title: 'Error',
-        description: 'Máximo 10 ejemplos por nivel',
-        variant: 'destructive',
-      });
-      return;
+    // Solo verificar el límite si estamos agregando un nuevo ejemplo
+    if (!editingExample) {
+      const totalExamples = hasStructuredExamples ? currentExamples.length : legacyExamples.length;
+      if (totalExamples >= 10) {
+        toast({
+          title: 'Error',
+          description: 'Máximo 10 ejemplos por nivel',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     if (hasStructuredExamples && onUpdateStructuredExamples) {
@@ -161,7 +180,15 @@ export default function LevelExamplesDialog({
         return;
       }
       
-      onUpdateStructuredExamples([...currentExamples, newExample]);
+      if (editingExample) {
+        // Actualizar ejemplo existente
+        const updatedExamples = [...currentExamples];
+        updatedExamples[editingExample.index] = newExample;
+        onUpdateStructuredExamples(updatedExamples);
+      } else {
+        // Agregar nuevo ejemplo
+        onUpdateStructuredExamples([...currentExamples, newExample]);
+      }
     } else {
       // Fallback al formato antiguo (solo para compatibilidad)
       const legacyFormat = `${newProblem.trim()} (Respuesta: ${newSolution.trim()})`;
@@ -174,8 +201,8 @@ export default function LevelExamplesDialog({
     setNewExplanation('');
     
     toast({
-      title: 'Ejemplo agregado',
-      description: `Ejemplo agregado para el nivel ${level}`,
+      title: editingExample ? 'Ejemplo actualizado' : 'Ejemplo agregado',
+      description: `Ejemplo ${editingExample ? 'actualizado' : 'agregado'} para el nivel ${level}`,
     });
   };
 
@@ -234,7 +261,7 @@ export default function LevelExamplesDialog({
 
           {/* Add new example form */}
           <div className="space-y-4 rounded-lg border p-4">
-            <h4 className="font-medium">Agregar nuevo ejemplo</h4>
+            <h4 className="font-medium">{editingExample ? 'Editar ejemplo' : 'Agregar nuevo ejemplo'}</h4>
             
             <div className="space-y-2">
               <Label htmlFor="problem">Problema</Label>
@@ -285,7 +312,7 @@ export default function LevelExamplesDialog({
               className="w-full"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Agregar Ejemplo
+              {editingExample ? 'Actualizar Ejemplo' : 'Agregar Ejemplo'}
             </Button>
           </div>
 
