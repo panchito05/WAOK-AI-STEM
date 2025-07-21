@@ -38,7 +38,6 @@ import { exerciseCache } from '@/lib/exercise-cache';
 import LevelExamplesDialog from '@/components/LevelExamplesDialog';
 
 const formSchema = z.object({
-  name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
   topic: z.string().min(2, 'El tema debe tener al menos 2 caracteres'),
   difficulty: z.number().min(1).max(10),
   customInstructions: z.string().optional(),
@@ -60,7 +59,11 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [correctedTopic, setCorrectedTopic] = useState<string>('');
+  const [topicColor, setTopicColor] = useState<string>('');
+  const [topicIcon, setTopicIcon] = useState<string>('');
   const [checkingSpelling, setCheckingSpelling] = useState(false);
+  const [suggestedColor, setSuggestedColor] = useState<string>('');
+  const [suggestedIcon, setSuggestedIcon] = useState<string>('');
   const [examplesDialogOpen, setExamplesDialogOpen] = useState(false);
   const [levelExamples, setLevelExamples] = useState<{ [level: number]: string[] }>(
     card?.levelExamples || {}
@@ -70,10 +73,17 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   );
   const [editingExample, setEditingExample] = useState<{ index: number; example: StructuredExample } | null>(null);
 
+  // Initialize color and icon from existing card
+  useEffect(() => {
+    if (card) {
+      setTopicColor(card.color || '');
+      setTopicIcon(card.icon || '');
+    }
+  }, [card]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: card?.name || '',
       topic: card?.topic || '',
       difficulty: card?.difficulty || 5,
       customInstructions: card?.customInstructions || '',
@@ -93,10 +103,20 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
         setCheckingSpelling(true);
         try {
           const result = await correctSpellingAction(topic);
-          if (result.data && result.data !== topic) {
-            setCorrectedTopic(result.data);
-          } else {
-            setCorrectedTopic('');
+          if (result.data) {
+            const { correctedText, color, icon } = result.data;
+            if (correctedText !== topic) {
+              setCorrectedTopic(correctedText);
+              setSuggestedColor(color || '');
+              setSuggestedIcon(icon || '');
+            } else {
+              setCorrectedTopic('');
+              setSuggestedColor('');
+              setSuggestedIcon('');
+              // Still set the color and icon for the current topic
+              setTopicColor(color || '');
+              setTopicIcon(icon || '');
+            }
           }
         } catch (error) {
           console.error('Error checking spelling:', error);
@@ -111,16 +131,35 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
 
 
   const onSubmit = async (values: FormValues) => {
+    console.log('Form submitted with values:', values);
     setIsLoading(true);
     try {
       let savedCard;
+      
+      // Ensure we have color and icon even if user didn't apply correction
+      let finalColor = topicColor;
+      let finalIcon = topicIcon;
+      
+      if (!finalColor || !finalIcon) {
+        // Get color and icon for the current topic
+        const result = await correctSpellingAction(values.topic);
+        if (result.data) {
+          finalColor = result.data.color || '';
+          finalIcon = result.data.icon || '';
+        }
+      }
+      
+      console.log('Creating card with:', { ...values, color: finalColor, icon: finalIcon });
       
       if (card) {
         // Update existing card
         savedCard = await updateCard(card.id, {
           ...values,
+          name: values.topic, // Use topic as name
           levelExamples: levelExamples,
-          structuredExamples: structuredExamples
+          structuredExamples: structuredExamples,
+          color: finalColor || card.color,
+          icon: finalIcon || card.icon
         });
         
         // Clear cache if topic, difficulty, instructions, or examples changed
@@ -153,10 +192,13 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
         // Create new card
         savedCard = await createCard({
           ...values,
+          name: values.topic, // Use topic as name
           customInstructions: values.customInstructions || '',
           isFavorite: false,
           levelExamples: levelExamples,
-          structuredExamples: structuredExamples
+          structuredExamples: structuredExamples,
+          color: finalColor,
+          icon: finalIcon
         });
         
         // Preload exercises for new card
@@ -191,6 +233,10 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const applyCorrectedTopic = () => {
     form.setValue('topic', correctedTopic);
     setCorrectedTopic('');
+    setTopicColor(suggestedColor);
+    setTopicIcon(suggestedIcon);
+    setSuggestedColor('');
+    setSuggestedIcon('');
   };
 
   const getDifficultyLabel = (value: number) => {
@@ -220,23 +266,6 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
         <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre de la Tarjeta</FormLabel>
-                  <FormControl>
-                    <Input placeholder="ej. División con decimales" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Un nombre descriptivo para identificar esta configuración
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="topic"

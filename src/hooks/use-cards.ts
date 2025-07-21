@@ -107,7 +107,7 @@ export function useCards() {
       setCards(cardStorage.getAll());
       toast({
         title: 'Tarjeta creada',
-        description: `La tarjeta "${newCard.name}" se ha creado correctamente`,
+        description: `La tarjeta "${newCard.topic}" se ha creado correctamente`,
       });
       return newCard;
     } catch (error) {
@@ -128,7 +128,7 @@ export function useCards() {
         setCards(cardStorage.getAll());
         toast({
           title: 'Tarjeta actualizada',
-          description: `La tarjeta "${updatedCard.name}" se ha actualizado`,
+          description: `La tarjeta "${updatedCard.topic}" se ha actualizado`,
         });
       }
       return updatedCard;
@@ -154,7 +154,7 @@ export function useCards() {
         setCards(cardStorage.getAll());
         toast({
           title: 'Tarjeta eliminada',
-          description: card ? `La tarjeta "${card.name}" se ha eliminado` : 'Tarjeta eliminada',
+          description: card ? `La tarjeta "${card.topic}" se ha eliminado` : 'Tarjeta eliminada',
         });
       }
       return success;
@@ -176,7 +176,7 @@ export function useCards() {
         setCards(cardStorage.getAll());
         toast({
           title: updatedCard.isFavorite ? 'Agregado a favoritos' : 'Removido de favoritos',
-          description: `"${updatedCard.name}" ${updatedCard.isFavorite ? 'es ahora favorito' : 'ya no es favorito'}`,
+          description: `"${updatedCard.topic}" ${updatedCard.isFavorite ? 'es ahora favorito' : 'ya no es favorito'}`,
         });
       }
       return updatedCard;

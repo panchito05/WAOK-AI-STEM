@@ -279,9 +279,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">{card.name}</h2>
+            <h2 className="text-xl font-semibold">{card.topic}</h2>
             <p className="text-sm text-muted-foreground">
-              Tema: {card.topic} • Dificultad: {card.difficulty}/10
+              Dificultad: {card.difficulty}/10
             </p>
           </div>
           <div className="text-right">

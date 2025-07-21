@@ -81,9 +81,9 @@ export default function AnswerPanel({
   };
 
   const numpadButtons = [
-    '7', '8', '9',
-    '4', '5', '6',
     '1', '2', '3',
+    '4', '5', '6',
+    '7', '8', '9',
     '0', '.', '/',
     '+', '-', '×',
     'C', '=', '←'
@@ -126,15 +126,6 @@ export default function AnswerPanel({
             </div>
 
             <div className="flex gap-2">
-              <Button
-                type="submit"
-                disabled={!canSubmit || !answer.trim()}
-                className="flex-1"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                Verificar Respuesta
-              </Button>
-              
               {!showSolution && (
                 <Button
                   type="button"
@@ -145,6 +136,15 @@ export default function AnswerPanel({
                   Revelar Respuesta
                 </Button>
               )}
+              
+              <Button
+                type="submit"
+                disabled={!canSubmit || !answer.trim()}
+                className="flex-1"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Verificar Respuesta
+              </Button>
             </div>
           </form>
 

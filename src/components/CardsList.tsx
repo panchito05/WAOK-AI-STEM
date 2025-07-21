@@ -24,6 +24,7 @@ import {
 import EmptyState from './EmptyState';
 import { PracticeCard } from '@/lib/storage';
 import { exerciseCache } from '@/lib/exercise-cache';
+import DynamicIcon from './DynamicIcon';
 
 interface CardsListProps {
   onSelectCard: (card: PracticeCard) => void;
@@ -109,15 +110,28 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard }: Ca
           return (
             <Card 
               key={card.id} 
-              className={`relative transition-all hover:shadow-lg ${
+              className={`relative transition-all hover:shadow-lg overflow-hidden ${
                 card.isFavorite ? 'ring-2 ring-yellow-400' : ''
               }`}
             >
-            <CardHeader>
+            {/* Colored Header */}
+            {card.color && (
+              <div 
+                className="h-12 flex items-center justify-center"
+                style={{ backgroundColor: card.color }}
+              >
+                <DynamicIcon 
+                  name={card.icon} 
+                  className="text-white" 
+                  size={24} 
+                />
+              </div>
+            )}
+            <CardHeader className={card.color ? 'pt-3' : ''}>
               <div className="flex items-start justify-between">
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg">{card.name}</CardTitle>
+                    <CardTitle className="text-lg">{card.topic}</CardTitle>
                     {poolStatus.ready && (
                       <Badge variant="secondary" className="gap-1">
                         <Zap className="h-3 w-3" />
@@ -125,9 +139,6 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard }: Ca
                       </Badge>
                     )}
                   </div>
-                  <CardDescription className="text-sm">
-                    Tema: {card.topic}
-                  </CardDescription>
                 </div>
                 <Button
                   variant="ghost"

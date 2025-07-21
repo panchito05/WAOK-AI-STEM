@@ -235,33 +235,25 @@ Este es un ejemplo de solución generada para pruebas. Con una API key válida d
   `.trim();
 }
 
-// Spell correction action
+// Spell correction action with color and icon mapping
 export async function correctSpellingAction(text: string) {
   try {
-    const prompt = `Corrige la ortografía del siguiente tema matemático. Solo devuelve el texto corregido sin explicaciones adicionales. Si el texto está bien escrito, devuélvelo tal cual.
+    // Import the topic mapping functions
+    const { getNormalizedTopicName, findTopicConfig } = await import('@/lib/topic-mapping');
     
-    Texto: "${text}"
+    // Get normalized/corrected topic name
+    const correctedText = getNormalizedTopicName(text);
     
-    Respuesta:`;
+    // Get color and icon configuration
+    const config = findTopicConfig(text);
     
-    // For now, return a simple correction for common mistakes
-    // In production, this would call Gemini AI
-    const corrections: Record<string, string> = {
-      'multiplicasion': 'multiplicación',
-      'divicion': 'división',
-      'fracciónes': 'fracciones',
-      'algebra': 'álgebra',
-      'ecuasiones': 'ecuaciones',
-      'aritmetica': 'aritmética',
-      'geometria': 'geometría',
-      'numeros primos': 'números primos',
-      'raiz cuadrada': 'raíz cuadrada',
+    return { 
+      data: {
+        correctedText,
+        color: config.color,
+        icon: config.icon
+      }
     };
-    
-    const lower = text.toLowerCase();
-    const corrected = corrections[lower] || text;
-    
-    return { data: corrected };
   } catch (error) {
     console.error('Error correcting spelling:', error);
     return { error: 'Failed to correct spelling' };

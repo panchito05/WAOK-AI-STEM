@@ -1,6 +1,7 @@
 // Función para migrar tarjetas existentes y corregir soluciones "Ver solución"
 
 import type { PracticeCard, StructuredExample } from './storage';
+import { findTopicConfig } from './topic-mapping';
 
 // Función para calcular la solución de un problema matemático simple
 function calculateSolution(problem: string): string {
@@ -74,6 +75,19 @@ export function migrateStructuredExamples(examples: StructuredExample[]): Struct
 export function migratePracticeCard(card: PracticeCard): PracticeCard {
   let needsUpdate = false;
   const updatedCard = { ...card };
+  
+  // Migrar color e icono si no existen
+  if (!card.color || !card.icon) {
+    const topicConfig = findTopicConfig(card.topic);
+    if (!card.color && topicConfig.color) {
+      updatedCard.color = topicConfig.color;
+      needsUpdate = true;
+    }
+    if (!card.icon && topicConfig.icon) {
+      updatedCard.icon = topicConfig.icon;
+      needsUpdate = true;
+    }
+  }
   
   // Migrar ejemplos estructurados si existen
   if (card.structuredExamples) {

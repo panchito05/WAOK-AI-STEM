@@ -19,6 +19,8 @@ export interface PracticeCard {
   isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
+  color?: string; // Color del header
+  icon?: string; // Nombre del icono de lucide-react
   levelExamples?: {
     [level: number]: string[]; // Nivel 1-10 con array de ejemplos - Mantener para compatibilidad
   };
