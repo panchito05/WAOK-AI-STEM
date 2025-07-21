@@ -13,6 +13,16 @@ export function useCards() {
   // Load cards on mount
   useEffect(() => {
     loadCards();
+    
+    // Limpiar ejercicios antiguos al cargar la app
+    setTimeout(() => {
+      console.log('Running exercise cache cleanup...');
+      exerciseCache.cleanOldExercises();
+      
+      // Log métricas globales
+      const metrics = exerciseCache.getUsageMetrics();
+      console.log('Global exercise pool metrics:', metrics);
+    }, 2000); // Esperar a que se carguen las tarjetas
   }, []);
 
   const loadCards = useCallback(() => {
@@ -40,20 +50,44 @@ export function useCards() {
       } else {
         setCards(storedCards);
         
-        // Preload exercises for ALL existing cards
-        console.log('Checking exercise pools for all cards...');
-        storedCards.forEach(async (card) => {
+        // Preload exercises with intelligent prioritization
+        console.log('Starting intelligent exercise preloading...');
+        
+        // Separar tarjetas por prioridad
+        const favoriteCards = storedCards.filter(card => card.isFavorite);
+        const regularCards = storedCards.filter(card => !card.isFavorite);
+        
+        // Precargar favoritos primero con más ejercicios
+        favoriteCards.forEach(async (card) => {
           const poolStatus = exerciseCache.getPoolStatus(card.id);
-          if (poolStatus.size < 3) {
-            console.log(`Card "${card.name}" needs preloading (current pool: ${poolStatus.size})`);
+          const targetSize = 30; // Pool completo para favoritos
+          
+          if (poolStatus.size < targetSize) {
+            console.log(`⭐ Favorite card "${card.name}" needs preloading (current: ${poolStatus.size}/${targetSize})`);
             await exerciseCache.preloadExercises({
               id: card.id,
               topic: card.topic,
               difficulty: card.difficulty,
-              customInstructions: card.customInstructions
+              customInstructions: card.customInstructions,
+              levelExamples: card.levelExamples,
+              structuredExamples: card.structuredExamples
             });
           }
         });
+        
+        // Precargar tarjetas regulares con menos ejercicios
+        setTimeout(() => {
+          regularCards.forEach(async (card) => {
+            const poolStatus = exerciseCache.getPoolStatus(card.id);
+            const targetSize = 15; // Pool reducido para no favoritos
+            
+            if (poolStatus.size < targetSize) {
+              console.log(`Card "${card.name}" needs preloading (current: ${poolStatus.size}/${targetSize})`);
+              // Generar solo lo necesario para alcanzar el objetivo
+              await exerciseCache.maintainPoolSize(card.id, targetSize);
+            }
+          });
+        }, 1000); // Retrasar precarga de regulares para priorizar favoritos
       }
     } catch (error) {
       console.error('Error loading cards:', error);

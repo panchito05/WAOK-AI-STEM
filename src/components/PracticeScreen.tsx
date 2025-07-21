@@ -59,37 +59,35 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
       console.log('[PracticeScreen] Loading exercises for card:', card.id, 'at', new Date().toISOString());
       
       try {
-        // Usar consumeFromPool directamente para hacer la operación atómica
-        let exercises = exerciseCache.consumeFromPool(card.id, card.exerciseCount);
+        // Obtener ejercicios no usados del pool
+        let exercises = exerciseCache.getUnusedExercises(card.id, card.exerciseCount);
         
         if (exercises.length >= card.exerciseCount) {
           // Tenemos suficientes ejercicios del caché
           console.log('[PracticeScreen] Using cached exercises:', exercises.length);
           if (isMounted) {
             setExercises(exercises);
-            exerciseCache.maintainPoolSize(card.id);
+            // Marcar ejercicios como usados
+            const exerciseIds = exercises.map(ex => ex.id);
+            exerciseCache.markAsUsed(card.id, exerciseIds);
             setIsLoading(false);
           }
           return;
         }
         
-        // Si no tenemos suficientes, devolver los que consumimos al pool
-        if (exercises.length > 0) {
-          console.log('[PracticeScreen] Not enough cached exercises, returning to pool:', exercises.length);
-          exerciseCache.addToPool(card.id, exercises);
-        }
+        // Si no tenemos suficientes, generar más
+        console.log('[PracticeScreen] Not enough exercises, generating more...');
+        await exerciseCache.ensureExercisesAvailable(card);
         
-        // Generar nuevos ejercicios
-        console.log('[PracticeScreen] Generating new exercises...');
-        const newExercises = await exerciseCache.ensureExercisesAvailable(card);
-        
-        // Consumir los ejercicios necesarios
-        exercises = exerciseCache.consumeFromPool(card.id, card.exerciseCount);
+        // Intentar obtener ejercicios nuevamente
+        exercises = exerciseCache.getUnusedExercises(card.id, card.exerciseCount);
         
         if (isMounted && exercises.length > 0) {
-          console.log('[PracticeScreen] Setting new exercises:', exercises.length);
+          console.log('[PracticeScreen] Setting exercises after generation:', exercises.length);
           setExercises(exercises);
-          exerciseCache.maintainPoolSize(card.id);
+          // Marcar ejercicios como usados
+          const exerciseIds = exercises.map(ex => ex.id);
+          exerciseCache.markAsUsed(card.id, exerciseIds);
           setIsLoading(false);
         }
       } catch (error) {

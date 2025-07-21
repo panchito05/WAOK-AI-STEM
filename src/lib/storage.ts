@@ -5,6 +5,8 @@ export interface StructuredExample {
   explanation: string;
 }
 
+import { migrateAllCards } from './migrate-cards';
+
 export interface PracticeCard {
   id: string;
   name: string;
@@ -27,6 +29,48 @@ export interface PracticeCard {
 
 const STORAGE_KEY = 'mathminds_practice_cards';
 
+// Función para calcular la solución de un problema matemático simple
+function calculateSolution(problem: string): string {
+  try {
+    // Intentar extraer números y operación de problemas simples
+    // Patterns como: "45 + 90 = ?", "35 + 105 = ?", etc.
+    const patterns = [
+      /^(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)\s*=\s*\?$/,
+      /^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*=\s*\?$/,
+      /^(\d+(?:\.\d+)?)\s*[×x\*]\s*(\d+(?:\.\d+)?)\s*=\s*\?$/,
+      /^(\d+(?:\.\d+)?)\s*[÷/]\s*(\d+(?:\.\d+)?)\s*=\s*\?$/,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = problem.match(pattern);
+      if (match) {
+        const num1 = parseFloat(match[1]);
+        const num2 = parseFloat(match[2]);
+        let result: number;
+        
+        if (problem.includes('+')) {
+          result = num1 + num2;
+        } else if (problem.includes('-')) {
+          result = num1 - num2;
+        } else if (problem.match(/[×x\*]/)) {
+          result = num1 * num2;
+        } else if (problem.match(/[÷/]/)) {
+          result = num1 / num2;
+        } else {
+          return ''; // No se pudo determinar la operación
+        }
+        
+        // Retornar como entero si no tiene decimales
+        return result % 1 === 0 ? result.toString() : result.toFixed(2);
+      }
+    }
+  } catch (error) {
+    console.error('Error calculating solution:', error);
+  }
+  
+  return ''; // No se pudo calcular
+}
+
 // Función para migrar ejemplos de string[] a StructuredExample[]
 function migrateExamples(levelExamples: { [level: number]: string[] }): { [level: number]: StructuredExample[] } {
   const migrated: { [level: number]: StructuredExample[] } = {};
@@ -38,26 +82,48 @@ function migrateExamples(levelExamples: { [level: number]: string[] }): { [level
       
       if (matches) {
         const problem = matches[1].trim();
-        const solution = matches[2]?.trim() || '';
+        let solution = matches[2]?.trim() || '';
         
-        // Generar una explicación básica si no hay una
+        // Si no hay solución o es "Ver solución", intentar calcularla
+        if (!solution || solution === 'Ver solución') {
+          solution = calculateSolution(problem);
+        }
+        
+        // Si aún no hay solución, intentar extraer números del problema
+        if (!solution) {
+          const numbers = problem.match(/\d+/g);
+          if (numbers && numbers.length >= 2) {
+            const num1 = parseInt(numbers[0]);
+            const num2 = parseInt(numbers[1]);
+            // Asumir suma si no se puede determinar la operación
+            solution = (num1 + num2).toString();
+          }
+        }
+        
+        // Generar una explicación básica
         let explanation = `Para resolver ${problem}`;
         if (solution) {
-          explanation += `, la respuesta es ${solution}`;
+          explanation = `Para resolver ${problem}, ${problem.includes('+') ? 'sumamos' : 
+                        problem.includes('-') ? 'restamos' : 
+                        problem.match(/[×x\*]/) ? 'multiplicamos' : 
+                        problem.match(/[÷/]/) ? 'dividimos' : 'calculamos'}: ${problem.replace('= ?', `= ${solution}`)}`;
         }
         
         return {
           problem,
-          solution: solution || 'Ver solución',
+          solution: solution || 'Calcular',
           explanation
         };
       }
       
       // Fallback para formatos no reconocidos
+      const calculatedSolution = calculateSolution(example);
       return {
         problem: example,
-        solution: 'Ver solución',
-        explanation: 'Ejemplo migrado del formato anterior'
+        solution: calculatedSolution || 'Calcular',
+        explanation: calculatedSolution ? 
+          `Para resolver ${example}, obtenemos ${calculatedSolution}` : 
+          'Ejemplo migrado del formato anterior'
       };
     });
   }
@@ -77,7 +143,7 @@ export const cardStorage = {
       const cards = JSON.parse(stored) as PracticeCard[];
       
       // Migrar ejemplos si es necesario
-      const migratedCards = cards.map(card => {
+      let migratedCards = cards.map(card => {
         if (card.levelExamples && !card.structuredExamples) {
           return {
             ...card,
@@ -86,6 +152,19 @@ export const cardStorage = {
         }
         return card;
       });
+      
+      // Migrar tarjetas con "Ver solución" a soluciones reales
+      const fullyMigratedCards = migrateAllCards(migratedCards);
+      
+      // Si hubo cambios, guardar las tarjetas actualizadas
+      const hasChanges = fullyMigratedCards.some((migrated, index) => 
+        migrated.updatedAt !== migratedCards[index].updatedAt
+      );
+      
+      if (hasChanges) {
+        this.saveAll(fullyMigratedCards);
+        migratedCards = fullyMigratedCards;
+      }
       
       // Sort by favorites first, then by updated date
       return migratedCards.sort((a, b) => {

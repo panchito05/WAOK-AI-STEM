@@ -339,11 +339,11 @@ async function validateAndFixExercises(
   
   // Analyze expected number range from examples
   let expectedRange: { min: number; max: number } | null = null;
-  if (card.structuredExamples?.[card.difficulty]?.length > 0) {
+  if (card.structuredExamples && card.structuredExamples[card.difficulty] && card.structuredExamples[card.difficulty].length > 0) {
     const exampleProblems = card.structuredExamples[card.difficulty].map(e => e.problem);
     expectedRange = analyzeNumberRange(exampleProblems);
     console.log(`Expected number range from examples: ${expectedRange.min}-${expectedRange.max}`);
-  } else if (card.levelExamples?.[card.difficulty]?.length > 0) {
+  } else if (card.levelExamples && card.levelExamples[card.difficulty] && card.levelExamples[card.difficulty].length > 0) {
     expectedRange = analyzeNumberRange(card.levelExamples[card.difficulty]);
     console.log(`Expected number range from examples: ${expectedRange.min}-${expectedRange.max}`);
   }
@@ -457,8 +457,8 @@ export async function generatePracticeSessionAction(card: {
 }) {
   try {
     // Get examples for the current difficulty level (prefer structured over legacy)
-    const currentStructuredExamples = card.structuredExamples?.[card.difficulty] || [];
-    const currentLevelExamples = card.levelExamples?.[card.difficulty] || [];
+    const currentStructuredExamples = card.structuredExamples && card.structuredExamples[card.difficulty] ? card.structuredExamples[card.difficulty] : [];
+    const currentLevelExamples = card.levelExamples && card.levelExamples[card.difficulty] ? card.levelExamples[card.difficulty] : [];
     
     // If we have examples, add clear instructions about number range
     let enhancedInstructions = card.customInstructions || '';

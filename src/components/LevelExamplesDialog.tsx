@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, X, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { StructuredExample } from '@/lib/storage';
+import { validateStructuredExample } from '@/lib/math-validator';
 
 interface LevelExamplesDialogProps {
   open: boolean;
@@ -41,6 +42,62 @@ export default function LevelExamplesDialog({
   const [newSolution, setNewSolution] = useState('');
   const [newExplanation, setNewExplanation] = useState('');
   const { toast } = useToast();
+
+  // Función para calcular automáticamente la solución
+  const calculateSolution = (problem: string): string => {
+    try {
+      const patterns = [
+        /^(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)\s*=\s*\?$/,
+        /^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*=\s*\?$/,
+        /^(\d+(?:\.\d+)?)\s*[×x\*]\s*(\d+(?:\.\d+)?)\s*=\s*\?$/,
+        /^(\d+(?:\.\d+)?)\s*[÷/]\s*(\d+(?:\.\d+)?)\s*=\s*\?$/,
+      ];
+      
+      for (const pattern of patterns) {
+        const match = problem.match(pattern);
+        if (match) {
+          const num1 = parseFloat(match[1]);
+          const num2 = parseFloat(match[2]);
+          let result: number;
+          
+          if (problem.includes('+')) {
+            result = num1 + num2;
+          } else if (problem.includes('-')) {
+            result = num1 - num2;
+          } else if (problem.match(/[×x\*]/)) {
+            result = num1 * num2;
+          } else if (problem.match(/[÷/]/)) {
+            result = num1 / num2;
+          } else {
+            return '';
+          }
+          
+          return result % 1 === 0 ? result.toString() : result.toFixed(2);
+        }
+      }
+    } catch (error) {
+      console.error('Error calculating solution:', error);
+    }
+    return '';
+  };
+
+  // Auto-calcular solución cuando cambia el problema
+  const handleProblemChange = (value: string) => {
+    setNewProblem(value);
+    
+    // Si el problema tiene formato válido, calcular la solución
+    const calculatedSolution = calculateSolution(value);
+    if (calculatedSolution && !newSolution) {
+      setNewSolution(calculatedSolution);
+      
+      // También generar explicación automática
+      const operation = value.includes('+') ? 'sumamos' : 
+                       value.includes('-') ? 'restamos' : 
+                       value.match(/[×x\*]/) ? 'multiplicamos' : 
+                       value.match(/[÷/]/) ? 'dividimos' : 'calculamos';
+      setNewExplanation(`Para resolver ${value}, ${operation}: ${value.replace('= ?', `= ${calculatedSolution}`)}`);
+    }
+  };
 
   // Usar ejemplos estructurados si están disponibles
   const hasStructuredExamples = onUpdateStructuredExamples && structuredExamples;
@@ -92,6 +149,18 @@ export default function LevelExamplesDialog({
         solution: newSolution.trim(),
         explanation: newExplanation.trim(),
       };
+      
+      // Validar el ejemplo antes de guardarlo
+      const validation = validateStructuredExample(newExample);
+      if (!validation.valid) {
+        toast({
+          title: 'Error',
+          description: validation.error || 'El ejemplo no es válido',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       onUpdateStructuredExamples([...currentExamples, newExample]);
     } else {
       // Fallback al formato antiguo (solo para compatibilidad)
@@ -173,7 +242,7 @@ export default function LevelExamplesDialog({
                 id="problem"
                 placeholder="ej. 5 + 7 = ?"
                 value={newProblem}
-                onChange={(e) => setNewProblem(e.target.value)}
+                onChange={(e) => handleProblemChange(e.target.value)}
                 maxLength={200}
               />
               <p className="text-xs text-muted-foreground">

@@ -79,7 +79,8 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   Generate exercises that:
   1. Use the EXACT same number range as the examples
   2. Follow the EXACT same problem format
-  3. Have mathematically CORRECT solutions
+  3. Have mathematically CORRECT solutions (NEVER use "Ver solución" or placeholders)
+  4. Each solution MUST be a numeric value, properly calculated
   {{else if examples}}
   **MANDATORY: Follow these example patterns:**
   {{#each examples}}

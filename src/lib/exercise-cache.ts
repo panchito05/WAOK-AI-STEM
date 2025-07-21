@@ -6,6 +6,10 @@ export interface Exercise {
   problem: string;
   solution: string;
   explanation: string;
+  // Metadata para el sistema de caché inteligente
+  usedAt?: string;      // Timestamp de último uso
+  usageCount?: number;  // Veces que se ha usado
+  createdAt: string;    // Cuándo se generó el ejercicio
 }
 
 export interface ExercisePool {
@@ -15,7 +19,11 @@ export interface ExercisePool {
 }
 
 const CACHE_KEY = 'mathminds_exercise_pools';
-const TARGET_POOL_SIZE = 3;
+const TARGET_POOL_SIZE = 30;  // Pool óptimo de ejercicios
+const MINIMUM_POOL_SIZE = 10;  // Mínimo antes de regenerar
+const ROTATION_DAYS = 7;       // Días antes de reutilizar ejercicios
+const MAX_POOL_SIZE = 50;      // Máximo de ejercicios por tarjeta
+const CLEANUP_DAYS = 30;       // Días antes de eliminar ejercicios muy antiguos
 
 export const exerciseCache = {
   // Get all exercise pools
@@ -72,8 +80,16 @@ export const exerciseCache = {
       }
       
       const validation = isValidExercise(exercise);
+      
+      // Agregar metadata si no existe
+      const exerciseWithMetadata: Exercise = {
+        ...exercise,
+        createdAt: exercise.createdAt || new Date().toISOString(),
+        usageCount: exercise.usageCount || 0
+      };
+      
       if (validation.valid) {
-        validExercises.push(exercise);
+        validExercises.push(exerciseWithMetadata);
       } else {
         const diagnosis = diagnoseExercise(exercise);
         console.warn(`[Cache] Exercise validation warnings:`, {
@@ -83,7 +99,7 @@ export const exerciseCache = {
           suggestions: diagnosis.suggestions
         });
         // Add it anyway if it has all required fields
-        validExercises.push(exercise);
+        validExercises.push(exerciseWithMetadata);
       }
     }
     
@@ -114,7 +130,84 @@ export const exerciseCache = {
     return pool.exercises.slice(0, count);
   },
 
-  // Consume exercises from pool (FIFO)
+  // Marcar ejercicios como usados (sin eliminarlos del pool)
+  markAsUsed(cardId: string, exerciseIds: string[]): void {
+    const pools = this.getAllPools();
+    const pool = pools[cardId];
+    
+    if (!pool) return;
+    
+    const now = new Date().toISOString();
+    pool.exercises = pool.exercises.map(exercise => {
+      if (exerciseIds.includes(exercise.id)) {
+        return {
+          ...exercise,
+          usedAt: now,
+          usageCount: (exercise.usageCount || 0) + 1
+        };
+      }
+      return exercise;
+    });
+    
+    this.savePools(pools);
+    
+    // Verificar si necesitamos más ejercicios
+    const unusedCount = pool.exercises.filter(ex => !ex.usedAt).length;
+    if (unusedCount < MINIMUM_POOL_SIZE) {
+      this.maintainPoolSize(cardId).catch(console.error);
+    }
+  },
+
+  // Obtener ejercicios no usados (o los menos recientemente usados)
+  getUnusedExercises(cardId: string, count: number): Exercise[] {
+    const pools = this.getAllPools();
+    const pool = pools[cardId];
+    
+    if (!pool || pool.exercises.length === 0) {
+      return [];
+    }
+    
+    const now = new Date();
+    const rotationThreshold = new Date(now.getTime() - (ROTATION_DAYS * 24 * 60 * 60 * 1000));
+    
+    // Categorizar ejercicios
+    const neverUsed = pool.exercises.filter(ex => !ex.usedAt);
+    const recentlyUsed = pool.exercises.filter(ex => 
+      ex.usedAt && new Date(ex.usedAt) > rotationThreshold
+    );
+    const readyToRotate = pool.exercises.filter(ex => 
+      ex.usedAt && new Date(ex.usedAt) <= rotationThreshold
+    );
+    
+    // Ordenar los que están listos para rotar por uso más antiguo primero
+    readyToRotate.sort((a, b) => {
+      const dateA = new Date(a.usedAt || 0).getTime();
+      const dateB = new Date(b.usedAt || 0).getTime();
+      return dateA - dateB;
+    });
+    
+    // Ordenar los usados recientemente por uso más antiguo primero (en caso de emergencia)
+    recentlyUsed.sort((a, b) => {
+      const dateA = new Date(a.usedAt || 0).getTime();
+      const dateB = new Date(b.usedAt || 0).getTime();
+      return dateA - dateB;
+    });
+    
+    // Prioridad: 1) Nunca usados, 2) Listos para rotar, 3) Usados recientemente
+    const available = [...neverUsed, ...readyToRotate, ...recentlyUsed];
+    
+    // Log para debug
+    console.log(`[Cache] Exercise selection for card ${cardId}:`, {
+      neverUsed: neverUsed.length,
+      readyToRotate: readyToRotate.length,
+      recentlyUsed: recentlyUsed.length,
+      requested: count
+    });
+    
+    return available.slice(0, count);
+  },
+
+  // Consume exercises from pool (FIFO) - DEPRECATED, mantener por compatibilidad
   consumeFromPool(cardId: string, count: number = 1): Exercise[] {
     const pools = this.getAllPools();
     const pool = pools[cardId];
@@ -130,7 +223,7 @@ export const exerciseCache = {
     this.savePools(pools);
     
     // Trigger background regeneration if pool is getting low
-    if (pool.exercises.length < TARGET_POOL_SIZE) {
+    if (pool.exercises.length < MINIMUM_POOL_SIZE) {
       this.maintainPoolSize(cardId).catch(console.error);
     }
     
@@ -170,10 +263,30 @@ export const exerciseCache = {
 
   // Maintain pool size (generate more if needed)
   async maintainPoolSize(cardId: string, targetSize: number = TARGET_POOL_SIZE): Promise<void> {
-    const currentPool = this.getPool(cardId);
-    const needed = targetSize - currentPool.length;
+    const pools = this.getAllPools();
+    const pool = pools[cardId];
     
-    if (needed <= 0) return;
+    if (!pool) return;
+    
+    // Contar ejercicios no usados
+    const unusedCount = pool.exercises.filter(ex => !ex.usedAt).length;
+    const totalCount = pool.exercises.length;
+    
+    // Necesitamos más ejercicios si:
+    // 1. Hay menos ejercicios no usados que el mínimo
+    // 2. El pool total es menor que el objetivo
+    const needsMore = unusedCount < MINIMUM_POOL_SIZE || totalCount < targetSize;
+    
+    if (!needsMore) return;
+    
+    // Calcular cuántos generar
+    const needed = Math.max(
+      targetSize - totalCount,  // Llenar hasta el objetivo
+      MINIMUM_POOL_SIZE - unusedCount  // Asegurar mínimo de no usados
+    );
+    
+    // Generar en lotes de 10 para eficiencia
+    const batchSize = Math.max(10, needed);
     
     // Get card info from storage to generate appropriate exercises
     const { cardStorage } = await import('./storage');
@@ -187,20 +300,24 @@ export const exerciseCache = {
     // Generate in background without blocking
     setTimeout(async () => {
       try {
-        console.log(`[Background] Generating ${needed} more exercises for card ${cardId}...`);
+        console.log(`[Background] Pool status for card "${card.name}":`, {
+          total: totalCount,
+          unused: unusedCount,
+          generating: batchSize
+        });
         
         const result = await generatePracticeSessionAction({
           topic: card.topic,
           difficulty: card.difficulty,
           customInstructions: card.customInstructions,
-          exerciseCount: needed,
+          exerciseCount: batchSize,
           levelExamples: card.levelExamples,
           structuredExamples: card.structuredExamples
         });
         
         if (result.data) {
           await this.addToPool(cardId, result.data);
-          console.log(`[Background] Added ${result.data.length} exercises to pool for card ${cardId}`);
+          console.log(`[Background] Successfully added ${result.data.length} exercises to pool for "${card.name}"`);
         }
       } catch (error) {
         console.error('[Background] Error maintaining pool size:', error);
@@ -233,7 +350,7 @@ export const exerciseCache = {
     return {
       size: pool?.exercises.length || 0,
       lastGenerated: pool?.lastGenerated || null,
-      ready: (pool?.exercises.length || 0) >= TARGET_POOL_SIZE
+      ready: (pool?.exercises.length || 0) >= MINIMUM_POOL_SIZE  // Ready si tiene el mínimo
     };
   },
 
@@ -278,5 +395,136 @@ export const exerciseCache = {
     
     // If all else fails, return what we have
     return currentPool;
+  },
+
+  // Limpiar ejercicios antiguos y mantener límites del pool
+  cleanOldExercises(): void {
+    const pools = this.getAllPools();
+    const now = new Date();
+    const cleanupThreshold = new Date(now.getTime() - (CLEANUP_DAYS * 24 * 60 * 60 * 1000));
+    let totalCleaned = 0;
+    
+    for (const [cardId, pool] of Object.entries(pools)) {
+      // Filtrar ejercicios muy antiguos que han sido usados
+      const filtered = pool.exercises.filter(ex => {
+        if (ex.usedAt) {
+          const usedDate = new Date(ex.usedAt);
+          // Mantener si fue usado recientemente o nunca ha sido usado
+          return usedDate > cleanupThreshold;
+        }
+        return true; // Mantener ejercicios nunca usados
+      });
+      
+      const removed = pool.exercises.length - filtered.length;
+      
+      // Si el pool es muy grande, eliminar los más antiguos
+      if (filtered.length > MAX_POOL_SIZE) {
+        // Ordenar por fecha de creación (más antiguos primero)
+        filtered.sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return dateA - dateB;
+        });
+        
+        // Mantener solo los más recientes
+        pool.exercises = filtered.slice(-MAX_POOL_SIZE);
+        totalCleaned += filtered.length - MAX_POOL_SIZE;
+      } else {
+        pool.exercises = filtered;
+        totalCleaned += removed;
+      }
+    }
+    
+    if (totalCleaned > 0) {
+      this.savePools(pools);
+      console.log(`[Cache] Cleaned ${totalCleaned} old exercises`);
+    }
+  },
+
+  // Obtener métricas de uso
+  getUsageMetrics(cardId?: string): {
+    totalExercises: number;
+    unusedExercises: number;
+    usedExercises: number;
+    averageUsageCount: number;
+    oldestUnused?: string;
+    newestUsed?: string;
+    poolHealth: 'excellent' | 'good' | 'fair' | 'poor';
+  } {
+    const pools = this.getAllPools();
+    
+    if (cardId) {
+      // Métricas para una tarjeta específica
+      const pool = pools[cardId];
+      if (!pool || pool.exercises.length === 0) {
+        return {
+          totalExercises: 0,
+          unusedExercises: 0,
+          usedExercises: 0,
+          averageUsageCount: 0,
+          poolHealth: 'poor'
+        };
+      }
+      
+      const unused = pool.exercises.filter(ex => !ex.usedAt);
+      const used = pool.exercises.filter(ex => ex.usedAt);
+      const totalUsage = used.reduce((sum, ex) => sum + (ex.usageCount || 1), 0);
+      const avgUsage = used.length > 0 ? totalUsage / used.length : 0;
+      
+      // Determinar salud del pool
+      let poolHealth: 'excellent' | 'good' | 'fair' | 'poor';
+      if (unused.length >= MINIMUM_POOL_SIZE && pool.exercises.length >= TARGET_POOL_SIZE) {
+        poolHealth = 'excellent';
+      } else if (unused.length >= MINIMUM_POOL_SIZE) {
+        poolHealth = 'good';
+      } else if (unused.length > 0) {
+        poolHealth = 'fair';
+      } else {
+        poolHealth = 'poor';
+      }
+      
+      return {
+        totalExercises: pool.exercises.length,
+        unusedExercises: unused.length,
+        usedExercises: used.length,
+        averageUsageCount: avgUsage,
+        oldestUnused: unused.length > 0 ? 
+          unused.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0].createdAt : 
+          undefined,
+        newestUsed: used.length > 0 ?
+          used.sort((a, b) => new Date(b.usedAt || 0).getTime() - new Date(a.usedAt || 0).getTime())[0].usedAt :
+          undefined,
+        poolHealth
+      };
+    } else {
+      // Métricas globales
+      let totalExercises = 0;
+      let unusedExercises = 0;
+      let usedExercises = 0;
+      let totalUsageCount = 0;
+      
+      for (const pool of Object.values(pools)) {
+        totalExercises += pool.exercises.length;
+        pool.exercises.forEach(ex => {
+          if (ex.usedAt) {
+            usedExercises++;
+            totalUsageCount += ex.usageCount || 1;
+          } else {
+            unusedExercises++;
+          }
+        });
+      }
+      
+      const avgUsage = usedExercises > 0 ? totalUsageCount / usedExercises : 0;
+      const poolHealth = unusedExercises >= Object.keys(pools).length * MINIMUM_POOL_SIZE ? 'good' : 'fair';
+      
+      return {
+        totalExercises,
+        unusedExercises,
+        usedExercises,
+        averageUsageCount: avgUsage,
+        poolHealth
+      };
+    }
   }
 };

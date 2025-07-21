@@ -153,6 +153,12 @@ export function isValidExercise(exercise: {
 
 export function validateMathAnswer(problem: string, solution: string): boolean {
   try {
+    // First check if solution is a non-numeric placeholder
+    const invalidSolutions = ['ver solución', 'ver solucion', 'calcular', '?', 'respuesta'];
+    if (invalidSolutions.includes(solution.toLowerCase().trim())) {
+      return false;
+    }
+    
     // For conceptual or complex exercises, trust the AI
     if (problem.match(/^(¿|Verifica:|Simplifica:|Encuentra)/i)) {
       return true;
@@ -288,6 +294,44 @@ export function validateNumberRange(
   }
   
   return { valid: true, actualRange };
+}
+
+// Validate structured example has proper numeric solution
+export function validateStructuredExample(example: {
+  problem: string;
+  solution: string;
+  explanation: string;
+}): { valid: boolean; error?: string } {
+  // Check for invalid placeholder solutions
+  const invalidSolutions = ['ver solución', 'ver solucion', 'calcular', '?', 'respuesta', ''];
+  if (invalidSolutions.includes(example.solution.toLowerCase().trim())) {
+    return { 
+      valid: false, 
+      error: 'La solución debe ser un valor numérico, no un placeholder' 
+    };
+  }
+  
+  // For basic arithmetic, verify the solution is numeric
+  if (example.problem.match(/\d+\s*[+\-×x\*÷/]\s*\d+\s*=\s*\?/)) {
+    // Check if solution is a valid number
+    const numericSolution = parseFloat(example.solution);
+    if (isNaN(numericSolution)) {
+      return { 
+        valid: false, 
+        error: 'La solución debe ser un número válido' 
+      };
+    }
+    
+    // Verify the math is correct
+    if (!validateMathAnswer(example.problem, example.solution)) {
+      return { 
+        valid: false, 
+        error: 'La solución matemática es incorrecta' 
+      };
+    }
+  }
+  
+  return { valid: true };
 }
 
 // Diagnose exercise problems and suggest fixes
