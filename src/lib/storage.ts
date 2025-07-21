@@ -10,6 +10,9 @@ export interface PracticeCard {
   isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
+  levelExamples?: {
+    [level: number]: string[]; // Nivel 1-10 con array de ejemplos
+  };
 }
 
 const STORAGE_KEY = 'mathminds_practice_cards';

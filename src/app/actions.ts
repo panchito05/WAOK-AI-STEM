@@ -23,7 +23,27 @@ export async function generateExercisesAction(formData: FormData) {
 
   try {
     const result = await generatePersonalizedExercises(validatedData.data);
-    return { data: result.exercises };
+    
+    // Ensure exercises have the expected format
+    if (!result || !result.exercises || !Array.isArray(result.exercises)) {
+      console.error('Invalid result format from AI:', result);
+      throw new Error('AI returned invalid format');
+    }
+    
+    // Validate each exercise has required fields
+    const validExercises = result.exercises.filter(ex => 
+      ex && 
+      typeof ex.problem === 'string' && ex.problem.trim() &&
+      typeof ex.solution === 'string' && ex.solution.trim() &&
+      typeof ex.explanation === 'string' && ex.explanation.trim()
+    );
+    
+    if (validExercises.length === 0) {
+      console.error('No valid exercises in AI response:', result.exercises);
+      throw new Error('AI returned no valid exercises');
+    }
+    
+    return { data: validExercises };
   } catch (error) {
     console.error('Error generating exercises:', error);
     
@@ -302,45 +322,153 @@ export async function getExampleByDifficultyAction(topic: string, difficulty: nu
   }
 }
 
+// Validate and fix exercises with invalid format or math
+async function validateAndFixExercises(
+  exercises: any[],
+  card: {
+    topic: string;
+    difficulty: number;
+    customInstructions: string;
+    levelExamples?: { [level: number]: string[] };
+  }
+): Promise<any[]> {
+  const { isValidExercise, diagnoseExercise } = await import('@/lib/math-validator');
+  const validExercises: any[] = [];
+  const invalidIndices: number[] = [];
+  
+  // First pass: identify valid and invalid exercises
+  exercises.forEach((exercise, index) => {
+    const validation = isValidExercise(exercise);
+    if (validation.valid) {
+      validExercises.push(exercise);
+    } else {
+      invalidIndices.push(index);
+      const diagnosis = diagnoseExercise(exercise);
+      console.warn(`Invalid exercise detected at index ${index}:`, {
+        problem: exercise.problem,
+        solution: exercise.solution,
+        errors: diagnosis.errors,
+        suggestions: diagnosis.suggestions
+      });
+    }
+  });
+  
+  // If all exercises are valid, return them
+  if (invalidIndices.length === 0) {
+    return exercises;
+  }
+  
+  // Regenerate invalid exercises (max 3 attempts per exercise)
+  const maxAttempts = 3;
+  for (const invalidIndex of invalidIndices) {
+    let regenerated = false;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`Regenerating exercise at index ${invalidIndex}, attempt ${attempt}/${maxAttempts}`);
+      
+      try {
+        // Generate a single replacement exercise
+        const replacement = await generatePersonalizedExercises({
+          level: card.difficulty <= 3 ? 'beginner' : card.difficulty <= 6 ? 'intermediate' : 'advanced',
+          topic: card.topic,
+          examples: card.levelExamples?.[card.difficulty] || []
+        });
+        
+        if (replacement.exercises && replacement.exercises.length > 0) {
+          const newExercise = replacement.exercises[0];
+          const validation = isValidExercise(newExercise);
+          
+          if (validation.valid) {
+            validExercises.splice(invalidIndex, 0, {
+              id: `exercise-${invalidIndex + 1}`,
+              problem: newExercise.problem,
+              solution: newExercise.solution,
+              explanation: newExercise.explanation
+            });
+            regenerated = true;
+            console.log(`Successfully regenerated exercise at index ${invalidIndex}`);
+            break;
+          } else {
+            console.warn(`Regenerated exercise still invalid, attempt ${attempt}/${maxAttempts}`);
+          }
+        }
+      } catch (error) {
+        console.error(`Error regenerating exercise at index ${invalidIndex}:`, error);
+      }
+    }
+    
+    // If we couldn't regenerate, create a simple fallback exercise
+    if (!regenerated) {
+      console.error(`Failed to regenerate valid exercise after ${maxAttempts} attempts, using fallback`);
+      const num1 = Math.floor(Math.random() * 10) + 1;
+      const num2 = Math.floor(Math.random() * 10) + 1;
+      validExercises.splice(invalidIndex, 0, {
+        id: `exercise-${invalidIndex + 1}`,
+        problem: `${num1} + ${num2} = ?`,
+        solution: (num1 + num2).toString(),
+        explanation: `Para resolver ${num1} + ${num2}, sumamos: ${num1} + ${num2} = ${num1 + num2}`
+      });
+    }
+  }
+  
+  return validExercises;
+}
+
 // Generate practice session action
 export async function generatePracticeSessionAction(card: {
   topic: string;
   difficulty: number;
   customInstructions: string;
   exerciseCount: number;
+  levelExamples?: { [level: number]: string[] };
 }) {
   try {
-    const prompt = `Generate ${card.exerciseCount} mathematical exercises for:
-
-    Topic: ${card.topic}
-    Difficulty: ${card.difficulty}/10
-    ${card.customInstructions ? `Special instructions: ${card.customInstructions}` : ''}
-
-    Return a JSON array of exercises with id, problem, solution, and explanation fields.
-    Make sure exercises are appropriate for the difficulty level.`;
+    // Get examples for the current difficulty level
+    const currentLevelExamples = card.levelExamples?.[card.difficulty] || [];
+    
+    // If we have examples, add clear instructions about number range
+    let enhancedInstructions = card.customInstructions || '';
+    if (currentLevelExamples.length > 0) {
+      const { analyzeNumberRange } = await import('@/lib/math-validator');
+      const range = analyzeNumberRange(currentLevelExamples);
+      enhancedInstructions += `\nIMPORTANT: Use ONLY numbers between ${range.min} and ${range.max} as shown in the examples.`;
+    }
 
     // Use the existing generatePersonalizedExercises function
     const result = await generatePersonalizedExercises({
       level: card.difficulty <= 3 ? 'beginner' : card.difficulty <= 6 ? 'intermediate' : 'advanced',
-      topic: card.topic
+      topic: card.topic,
+      examples: currentLevelExamples
     });
 
-    // Transform to expected format
-    const exercises = result.exercises.map((ex: any, index: number) => ({
-      id: `exercise-${index + 1}`,
-      problem: ex.problem,
-      solution: ex.solution,
-      explanation: ex.explanation
-    }));
+    // Transform to expected format and validate
+    const { validateMathAnswer } = await import('@/lib/math-validator');
+    console.log(`[Actions] Generated ${result.exercises.length} exercises from AI:`, JSON.stringify(result.exercises, null, 2));
+    
+    const exercises = result.exercises.map((ex: any, index: number) => {
+      // Validate math correctness for basic operations
+      const isValid = validateMathAnswer(ex.problem, ex.solution);
+      if (!isValid) {
+        console.warn(`Invalid math detected: ${ex.problem} = ${ex.solution}`);
+      }
+      
+      return {
+        id: `exercise-${index + 1}`,
+        problem: ex.problem,
+        solution: ex.solution,
+        explanation: ex.explanation
+      };
+    });
 
     // Generate more if needed
     while (exercises.length < card.exerciseCount) {
       const additionalResult = await generatePersonalizedExercises({
         level: card.difficulty <= 3 ? 'beginner' : card.difficulty <= 6 ? 'intermediate' : 'advanced',
-        topic: card.topic
+        topic: card.topic,
+        examples: currentLevelExamples
       });
       
-      additionalResult.exercises.forEach((ex: any, index: number) => {
+      for (const ex of additionalResult.exercises) {
         if (exercises.length < card.exerciseCount) {
           exercises.push({
             id: `exercise-${exercises.length + 1}`,
@@ -349,14 +477,26 @@ export async function generatePracticeSessionAction(card: {
             explanation: ex.explanation
           });
         }
-      });
+      }
     }
 
-    return { data: exercises.slice(0, card.exerciseCount) };
+    // Validate and fix all exercises before returning
+    console.log(`Validating ${exercises.length} exercises...`);
+    const validatedExercises = await validateAndFixExercises(exercises, card);
+    console.log(`Validation complete. Returning ${validatedExercises.length} valid exercises.`);
+
+    return { data: validatedExercises.slice(0, card.exerciseCount) };
   } catch (error) {
     console.error('Error generating practice session:', error);
+    console.error('Full error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      topic: card.topic,
+      difficulty: card.difficulty
+    });
     
     // Fallback to mock data when API fails
+    console.warn(`Using mock exercises for topic: ${card.topic}`);
     const mockExercises = generateMockPracticeSession(card);
     return { data: mockExercises };
   }
@@ -378,25 +518,25 @@ function generateMockPracticeSession(card: {
     const topicLower = card.topic.toLowerCase();
     let problem, solution, explanation;
     
-    if (topicLower.includes('suma') || topicLower.includes('adición')) {
+    if (topicLower.includes('suma') || topicLower.includes('adición') || topicLower.includes('addition')) {
       const a = Math.floor(Math.random() * baseNum) + 1;
       const b = Math.floor(Math.random() * baseNum) + 1;
       problem = `${a} + ${b} = ?`;
       solution = (a + b).toString();
       explanation = `Para resolver ${a} + ${b}, sumamos los números: ${a} + ${b} = ${solution}`;
-    } else if (topicLower.includes('resta') || topicLower.includes('substracción')) {
+    } else if (topicLower.includes('resta') || topicLower.includes('substracción') || topicLower.includes('subtraction')) {
       const a = Math.floor(Math.random() * baseNum * 2) + baseNum;
       const b = Math.floor(Math.random() * baseNum) + 1;
       problem = `${a} - ${b} = ?`;
       solution = (a - b).toString();
       explanation = `Para resolver ${a} - ${b}, restamos: ${a} - ${b} = ${solution}`;
-    } else if (topicLower.includes('multiplicación') || topicLower.includes('producto')) {
+    } else if (topicLower.includes('multiplicación') || topicLower.includes('producto') || topicLower.includes('multiplication')) {
       const a = Math.floor(Math.random() * (baseNum / 2)) + 1;
       const b = Math.floor(Math.random() * (baseNum / 2)) + 1;
       problem = `${a} × ${b} = ?`;
       solution = (a * b).toString();
       explanation = `Para resolver ${a} × ${b}, multiplicamos: ${a} × ${b} = ${solution}`;
-    } else if (topicLower.includes('división')) {
+    } else if (topicLower.includes('división') || topicLower.includes('division')) {
       const b = Math.floor(Math.random() * (baseNum / 2)) + 1;
       const result = Math.floor(Math.random() * (baseNum / 2)) + 1;
       const a = b * result;

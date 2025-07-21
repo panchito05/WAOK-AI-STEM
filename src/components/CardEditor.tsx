@@ -29,11 +29,13 @@ import {
   X, 
   Sparkles,
   AlertCircle,
-  Loader2
+  Loader2,
+  Plus
 } from 'lucide-react';
 import { correctSpellingAction, getExampleByDifficultyAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { exerciseCache } from '@/lib/exercise-cache';
+import LevelExamplesDialog from '@/components/LevelExamplesDialog';
 
 const formSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
@@ -61,6 +63,10 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const [loadingExample, setLoadingExample] = useState(false);
   const [correctedTopic, setCorrectedTopic] = useState<string>('');
   const [checkingSpelling, setCheckingSpelling] = useState(false);
+  const [examplesDialogOpen, setExamplesDialogOpen] = useState(false);
+  const [levelExamples, setLevelExamples] = useState<{ [level: number]: string[] }>(
+    card?.levelExamples || {}
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -129,12 +135,17 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       
       if (card) {
         // Update existing card
-        savedCard = await updateCard(card.id, values);
+        savedCard = await updateCard(card.id, {
+          ...values,
+          levelExamples: levelExamples
+        });
         
-        // Clear cache if topic, difficulty, or instructions changed
+        // Clear cache if topic, difficulty, instructions, or examples changed
+        const examplesChanged = JSON.stringify(card.levelExamples) !== JSON.stringify(levelExamples);
         if (card.topic !== values.topic || 
             card.difficulty !== values.difficulty || 
-            card.customInstructions !== values.customInstructions) {
+            card.customInstructions !== values.customInstructions ||
+            examplesChanged) {
           exerciseCache.clearPool(card.id);
           
           // Preload new exercises
@@ -158,6 +169,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
           ...values,
           customInstructions: values.customInstructions || '',
           isFavorite: false,
+          levelExamples: levelExamples
         });
         
         // Preload exercises for new card
@@ -209,15 +221,16 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>{card ? 'Editar Tarjeta' : 'Crear Nueva Tarjeta'}</CardTitle>
-        <CardDescription>
-          Configura los parámetros de tu sesión de práctica personalizada
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent>
+    <>
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>{card ? 'Editar Tarjeta' : 'Crear Nueva Tarjeta'}</CardTitle>
+          <CardDescription>
+            Configura los parámetros de tu sesión de práctica personalizada
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -283,7 +296,26 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
               name="difficulty"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nivel de Dificultad</FormLabel>
+                  <div className="flex items-center justify-between mb-2">
+                    <FormLabel>Nivel de Dificultad</FormLabel>
+                    <div className="flex items-center gap-2">
+                      {levelExamples[field.value]?.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {levelExamples[field.value].length} ejemplo{levelExamples[field.value].length !== 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setExamplesDialogOpen(true)}
+                        className="h-7 px-2"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Ejemplos
+                      </Button>
+                    </div>
+                  </div>
                   <FormControl>
                     <div className="space-y-3">
                       <Slider
@@ -448,5 +480,20 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
         </Form>
       </CardContent>
     </Card>
+
+      {/* Level Examples Dialog */}
+      <LevelExamplesDialog
+        open={examplesDialogOpen}
+        onOpenChange={setExamplesDialogOpen}
+        level={difficulty}
+        examples={levelExamples[difficulty] || []}
+        onUpdateExamples={(examples) => {
+          setLevelExamples(prev => ({
+            ...prev,
+            [difficulty]: examples
+          }));
+        }}
+      />
+    </>
   );
 }

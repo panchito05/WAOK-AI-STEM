@@ -49,7 +49,7 @@ export const exerciseCache = {
   },
 
   // Add exercises to pool
-  addToPool(cardId: string, exercises: Exercise[]): void {
+  async addToPool(cardId: string, exercises: Exercise[]): Promise<void> {
     const pools = this.getAllPools();
     
     if (!pools[cardId]) {
@@ -60,9 +60,43 @@ export const exerciseCache = {
       };
     }
     
-    // Add new exercises to the pool
-    pools[cardId].exercises.push(...exercises);
+    // Validate exercises before adding to pool
+    const { isValidExercise, diagnoseExercise } = await import('./math-validator');
+    const validExercises: Exercise[] = [];
+    
+    for (const exercise of exercises) {
+      // Basic validation - ensure required fields exist
+      if (!exercise.problem || !exercise.solution || !exercise.explanation) {
+        console.error(`[Cache] Exercise missing required fields:`, exercise);
+        continue;
+      }
+      
+      const validation = isValidExercise(exercise);
+      if (validation.valid) {
+        validExercises.push(exercise);
+      } else {
+        const diagnosis = diagnoseExercise(exercise);
+        console.warn(`[Cache] Exercise validation warnings:`, {
+          problem: exercise.problem,
+          solution: exercise.solution,
+          errors: diagnosis.errors,
+          suggestions: diagnosis.suggestions
+        });
+        // Add it anyway if it has all required fields
+        validExercises.push(exercise);
+      }
+    }
+    
+    if (validExercises.length === 0) {
+      console.error(`[Cache] No exercises to add for card ${cardId} - all were missing required fields`);
+      return;
+    }
+    
+    // Add exercises to the pool
+    pools[cardId].exercises.push(...validExercises);
     pools[cardId].lastGenerated = new Date().toISOString();
+    
+    console.log(`[Cache] Added ${validExercises.length} valid exercises (rejected ${exercises.length - validExercises.length} invalid)`);
     
     this.savePools(pools);
   },
@@ -109,6 +143,7 @@ export const exerciseCache = {
     topic: string;
     difficulty: number;
     customInstructions: string;
+    levelExamples?: { [level: number]: string[] };
   }): Promise<void> {
     try {
       console.log(`Preloading exercises for card ${card.id}...`);
@@ -118,11 +153,12 @@ export const exerciseCache = {
         topic: card.topic,
         difficulty: card.difficulty,
         customInstructions: card.customInstructions,
-        exerciseCount: TARGET_POOL_SIZE
+        exerciseCount: TARGET_POOL_SIZE,
+        levelExamples: card.levelExamples
       });
       
       if (result.data) {
-        this.addToPool(card.id, result.data);
+        await this.addToPool(card.id, result.data);
         console.log(`Preloaded ${result.data.length} exercises for card ${card.id}`);
       }
     } catch (error) {
@@ -155,11 +191,12 @@ export const exerciseCache = {
           topic: card.topic,
           difficulty: card.difficulty,
           customInstructions: card.customInstructions,
-          exerciseCount: needed
+          exerciseCount: needed,
+          levelExamples: card.levelExamples
         });
         
         if (result.data) {
-          this.addToPool(cardId, result.data);
+          await this.addToPool(cardId, result.data);
           console.log(`[Background] Added ${result.data.length} exercises to pool for card ${cardId}`);
         }
       } catch (error) {
@@ -204,6 +241,7 @@ export const exerciseCache = {
     difficulty: number;
     customInstructions: string;
     exerciseCount: number;
+    levelExamples?: { [level: number]: string[] };
   }): Promise<Exercise[]> {
     const currentPool = this.getWithoutConsuming(card.id, card.exerciseCount);
     
@@ -220,12 +258,13 @@ export const exerciseCache = {
         topic: card.topic,
         difficulty: card.difficulty,
         customInstructions: card.customInstructions,
-        exerciseCount: card.exerciseCount
+        exerciseCount: card.exerciseCount,
+        levelExamples: card.levelExamples
       });
       
       if (result.data) {
         // Add to pool for future use
-        this.addToPool(card.id, result.data);
+        await this.addToPool(card.id, result.data);
         return result.data;
       }
     } catch (error) {

@@ -18,7 +18,8 @@ import {
   Clock,
   RotateCcw,
   Zap,
-  Loader2
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { PracticeCard } from '@/lib/storage';
@@ -174,8 +175,16 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard }: Ca
                   <Target className="h-3 w-3" />
                   <span>{card.attemptsPerExercise} intentos</span>
                 </div>
+                {card.levelExamples && Object.keys(card.levelExamples).length > 0 && (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Sparkles className="h-3 w-3" />
+                    <span>
+                      {Object.values(card.levelExamples).reduce((total, examples) => total + examples.length, 0)} ejemplos
+                    </span>
+                  </div>
+                )}
                 {card.autoCompensation && (
-                  <div className="col-span-2 flex items-center gap-1 text-muted-foreground">
+                  <div className="flex items-center gap-1 text-muted-foreground">
                     <RotateCcw className="h-3 w-3" />
                     <span>Compensación automática</span>
                   </div>

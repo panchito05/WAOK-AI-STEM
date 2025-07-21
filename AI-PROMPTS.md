@@ -34,7 +34,7 @@ Responde de forma breve y clara para confirmar que estamos alineados.
 
 ### Prompt: Plan de Implementación Detallado
 ```
-Ahora que confirmamos el objetivo, analiza el código relacionado y explora la arquitectura actual del proyecto:
+Ultra Think Ahora que confirmamos el objetivo, analiza el código relacionado y explora la arquitectura actual del proyecto:
 
 1. Identifica EXACTAMENTE qué archivos y funciones necesitan modificarse
 2. Lista las dependencias entre componentes que debemos considerar

@@ -10,11 +10,49 @@ MathMinds is an AI-powered math tutoring application for children built with Nex
 
 **Important**: This project is planned to migrate to Google's GenAI Processors technology, an open-source Python library designed for building sophisticated Gemini applications with multimodal input and real-time responsiveness.
 
+## Project Initialization Guide
+
+### Platform Considerations
+- **IMPORTANT**: Use Windows PowerShell or Command Prompt for development
+- WSL has permission issues with node_modules in Windows file system
+- If using WSL, expect ENOTEMPTY errors when installing packages
+
+### Step-by-Step Initialization
+
+1. **Navigate to project directory** (Windows PowerShell):
+   ```powershell
+   cd "C:\Users\wilbe\Desktop\Trae AI WAOK-Schedule\mathminds-app"
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure API Key** (REQUIRED):
+   Create `.env.local` file in project root:
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+
+4. **Start development server**:
+   ```bash
+   npm run dev
+   ```
+   Server will run on http://localhost:9002
+
+### Common Issues and Solutions
+
+1. **"next is not recognized" error**: Run `npm install` first
+2. **TypeScript missing**: Let Next.js auto-install or run `npm install --save-dev typescript`
+3. **API Key error**: Ensure `.env.local` exists with valid GEMINI_API_KEY
+4. **WSL permission errors**: Use Windows PowerShell instead
+
 ## Essential Commands
 
 ### Development
-- `npm run dev` - Start Next.js development server on port 9002
-- `npm run genkit:dev` - Start Genkit AI development server
+- `npm run dev` - Start Next.js development server on port 9002 (with Turbopack)
+- `npm run genkit:dev` - Start Genkit AI development server (requires tsx)
 - `npm run genkit:watch` - Start Genkit with file watching
 
 ### Code Quality

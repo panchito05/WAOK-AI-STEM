@@ -210,7 +210,8 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
     try {
       const result = await generatePracticeSessionAction({
         ...card,
-        exerciseCount: 1
+        exerciseCount: 1,
+        levelExamples: card.levelExamples
       });
       
       if (result.data && result.data.length > 0) {
