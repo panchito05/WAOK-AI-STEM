@@ -44,6 +44,7 @@ const formSchema = z.object({
   exerciseCount: z.number().min(1).max(50),
   attemptsPerExercise: z.number().min(1).max(10),
   autoCompensation: z.boolean(),
+  adaptiveDifficulty: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -92,6 +93,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       exerciseCount: card?.exerciseCount || 10,
       attemptsPerExercise: card?.attemptsPerExercise || 3,
       autoCompensation: card?.autoCompensation || false,
+      adaptiveDifficulty: card?.adaptiveDifficulty || false,
     },
   });
 
@@ -536,6 +538,29 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
                     </FormLabel>
                     <FormDescription>
                       Agregar un ejercicio extra por cada fallo o solución revelada
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="adaptiveDifficulty"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Dificultad Adaptativa
+                    </FormLabel>
+                    <FormDescription>
+                      Aumenta el nivel después de 10 correctas seguidas
                     </FormDescription>
                   </div>
                   <FormControl>

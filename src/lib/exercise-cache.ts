@@ -68,8 +68,12 @@ export const exerciseCache = {
       };
     }
     
+    // Get card info to validate operation type
+    const { cardStorage } = await import('./storage');
+    const card = cardStorage.getById(cardId);
+    
     // Validate exercises before adding to pool
-    const { isValidExercise, diagnoseExercise } = await import('./math-validator');
+    const { isValidExercise, diagnoseExercise, validateOperationType } = await import('./math-validator');
     const validExercises: Exercise[] = [];
     
     for (const exercise of exercises) {
@@ -77,6 +81,20 @@ export const exerciseCache = {
       if (!exercise.problem || !exercise.solution || !exercise.explanation) {
         console.error(`[Cache] Exercise missing required fields:`, exercise);
         continue;
+      }
+      
+      // Check if operation type matches the card topic
+      if (card) {
+        const operationValidation = validateOperationType(exercise.problem, card.topic);
+        if (!operationValidation.valid) {
+          console.error(`[Cache] Exercise has wrong operation type:`, {
+            problem: exercise.problem,
+            topic: card.topic,
+            expected: operationValidation.expectedOperation,
+            actual: operationValidation.actualOperation
+          });
+          continue; // Skip this exercise completely
+        }
       }
       
       const validation = isValidExercise(exercise);

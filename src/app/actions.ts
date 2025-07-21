@@ -633,7 +633,7 @@ async function validateAndFixExercises(
     structuredExamples?: { [level: number]: { problem: string; solution: string; explanation: string }[] };
   }
 ): Promise<any[]> {
-  const { isValidExercise, diagnoseExercise, analyzeNumberRange, validateNumberRange } = await import('@/lib/math-validator');
+  const { isValidExercise, diagnoseExercise, analyzeNumberRange, validateNumberRange, validateOperationType } = await import('@/lib/math-validator');
   const validExercises: any[] = [];
   const invalidIndices: number[] = [];
   
@@ -652,6 +652,19 @@ async function validateAndFixExercises(
   exercises.forEach((exercise, index) => {
     const validation = isValidExercise(exercise);
     let isValid = validation.valid;
+    
+    // Check if operation type matches the topic
+    const operationValidation = validateOperationType(exercise.problem, card.topic);
+    if (!operationValidation.valid) {
+      isValid = false;
+      console.warn(`Exercise at index ${index} has wrong operation type:`, {
+        problem: exercise.problem,
+        topic: card.topic,
+        expected: operationValidation.expectedOperation,
+        actual: operationValidation.actualOperation,
+        error: operationValidation.error
+      });
+    }
     
     // Also check number range if we have examples
     if (isValid && expectedRange) {

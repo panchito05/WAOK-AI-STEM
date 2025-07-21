@@ -55,11 +55,24 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   - Level: {{{level}}}
   - Topic: {{{topic}}}
   {{#if structuredExamples}}
-  - I have structured examples to follow. I must analyze the number range used in these examples.
+  - I have structured examples to follow. I must analyze the number range and operation type used in these examples.
   {{/if}}
+  
+  Let me identify the specific operation required:
+  - If topic contains "suma", "adición", or "addition" → ONLY use addition (+)
+  - If topic contains "resta", "substracción", or "subtraction" → ONLY use subtraction (-)
+  - If topic contains "multiplicación", "producto", or "multiplication" → ONLY use multiplication (× or *)
+  - If topic contains "división" or "division" → ONLY use division (÷ or /)
   </thinking>
 
-  Generate exactly 5 mathematical exercises.
+  Generate exactly 5 mathematical exercises for the topic: {{{topic}}}
+
+  **CRITICAL OPERATION RULE:**
+  - Topic is "{{{topic}}}"
+  - You MUST ONLY generate exercises that match this operation type
+  - If the topic is "Resta" or contains "subtraction", ALL exercises MUST use subtraction (-)
+  - If the topic is "Suma" or contains "addition", ALL exercises MUST use addition (+)
+  - NEVER mix operations - ALL 5 exercises must use the SAME operation
 
   {{#if structuredExamples}}
   **MANDATORY: You MUST follow these examples EXACTLY:**
@@ -77,17 +90,18 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   - NEVER deviate from the number range shown in examples
   
   Generate exercises that:
-  1. Use the EXACT same number range as the examples
-  2. Follow the EXACT same problem format
-  3. Have mathematically CORRECT solutions (NEVER use "Ver solución" or placeholders)
-  4. Each solution MUST be a numeric value, properly calculated
+  1. Use the EXACT same operation as shown in the topic and examples
+  2. Use the EXACT same number range as the examples
+  3. Follow the EXACT same problem format
+  4. Have mathematically CORRECT solutions (NEVER use "Ver solución" or placeholders)
+  5. Each solution MUST be a numeric value, properly calculated
   {{else if examples}}
   **MANDATORY: Follow these example patterns:**
   {{#each examples}}
   - {{{this}}}
   {{/each}}
   
-  Analyze the number range and use ONLY similar numbers.
+  Analyze the operation type and number range, use ONLY the same operation and similar numbers.
   {{/if}}
 
   {{#unless examples}}
@@ -95,6 +109,7 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   - Beginner: numbers 1-10
   - Intermediate: numbers 10-50  
   - Advanced: numbers 50-100+
+  - ALL exercises MUST use the operation specified in the topic
   {{/unless}}
   
   Return JSON with problem, solution, and explanation for each exercise.`,

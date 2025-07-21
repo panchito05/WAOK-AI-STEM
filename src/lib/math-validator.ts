@@ -334,6 +334,66 @@ export function validateStructuredExample(example: {
   return { valid: true };
 }
 
+// Validate that exercise operation matches the topic
+export function validateOperationType(
+  problem: string,
+  topic: string
+): { valid: boolean; expectedOperation?: string; actualOperation?: string; error?: string } {
+  // Normalize topic to lowercase
+  const topicLower = topic.toLowerCase();
+  
+  // Define operation patterns
+  const operationPatterns = {
+    addition: /\d+\s*\+\s*\d+|^\??\s*\+\s*\d+|\d+\s*\+\s*\??/,
+    subtraction: /\d+\s*-\s*\d+|^\??\s*-\s*\d+|\d+\s*-\s*\??/,
+    multiplication: /\d+\s*[×x\*]\s*\d+|^\??\s*[×x\*]\s*\d+|\d+\s*[×x\*]\s*\??/,
+    division: /\d+\s*[÷/]\s*\d+|^\??\s*[÷/]\s*\d+|\d+\s*[÷/]\s*\??/
+  };
+  
+  // Detect actual operation in problem
+  let actualOperation: string | undefined;
+  if (operationPatterns.addition.test(problem)) actualOperation = 'addition';
+  else if (operationPatterns.subtraction.test(problem)) actualOperation = 'subtraction';
+  else if (operationPatterns.multiplication.test(problem)) actualOperation = 'multiplication';
+  else if (operationPatterns.division.test(problem)) actualOperation = 'division';
+  
+  // Determine expected operation from topic
+  let expectedOperation: string | undefined;
+  if (topicLower.includes('suma') || topicLower.includes('adición') || topicLower.includes('addition')) {
+    expectedOperation = 'addition';
+  } else if (topicLower.includes('resta') || topicLower.includes('substracción') || topicLower.includes('subtraction')) {
+    expectedOperation = 'subtraction';
+  } else if (topicLower.includes('multiplicación') || topicLower.includes('producto') || topicLower.includes('multiplication')) {
+    expectedOperation = 'multiplication';
+  } else if (topicLower.includes('división') || topicLower.includes('division')) {
+    expectedOperation = 'division';
+  }
+  
+  // Special cases for conceptual exercises
+  if (problem.match(/^(¿|Verifica:|Simplifica:|Encuentra)/i)) {
+    return { valid: true }; // Conceptual exercises are always valid
+  }
+  
+  // If we can't determine the expected operation, assume it's valid
+  if (!expectedOperation) {
+    return { valid: true };
+  }
+  
+  // Check if actual matches expected
+  const isValid = actualOperation === expectedOperation;
+  
+  if (!isValid) {
+    return {
+      valid: false,
+      expectedOperation,
+      actualOperation: actualOperation || 'unknown',
+      error: `Exercise uses ${actualOperation || 'unknown'} but topic is ${expectedOperation}`
+    };
+  }
+  
+  return { valid: true, expectedOperation, actualOperation };
+}
+
 // Diagnose exercise problems and suggest fixes
 export function diagnoseExercise(exercise: {
   problem: string;

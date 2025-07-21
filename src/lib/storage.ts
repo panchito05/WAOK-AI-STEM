@@ -16,6 +16,7 @@ export interface PracticeCard {
   exerciseCount: number;
   attemptsPerExercise: number;
   autoCompensation: boolean;
+  adaptiveDifficulty?: boolean; // Increases level after 10 correct in a row
   isFavorite: boolean;
   createdAt: string;
   updatedAt: string;

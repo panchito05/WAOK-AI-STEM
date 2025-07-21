@@ -19,7 +19,8 @@ import {
   RotateCcw,
   Zap,
   Loader2,
-  Sparkles
+  Sparkles,
+  TrendingUp
 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { PracticeCard } from '@/lib/storage';
@@ -198,6 +199,12 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard }: Ca
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <RotateCcw className="h-3 w-3" />
                     <span>Compensación automática</span>
+                  </div>
+                )}
+                {card.adaptiveDifficulty && (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <TrendingUp className="h-3 w-3" />
+                    <span>Dificultad adaptativa</span>
                   </div>
                 )}
               </div>

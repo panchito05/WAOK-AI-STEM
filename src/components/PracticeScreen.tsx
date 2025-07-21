@@ -13,7 +13,8 @@ import {
   RotateCcw,
   Target,
   Trophy,
-  AlertCircle
+  AlertCircle,
+  TrendingUp
 } from 'lucide-react';
 import { 
   generatePracticeSessionAction, 
@@ -49,6 +50,10 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   const [hint, setHint] = useState<string>('');
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | undefined>();
   const [sessionComplete, setSessionComplete] = useState(false);
+  
+  // Adaptive difficulty states
+  const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
+  const [currentDifficulty, setCurrentDifficulty] = useState(card.difficulty);
 
   // Load exercises once on mount
   useEffect(() => {
@@ -110,6 +115,35 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
     };
   }, []); // Empty dependency array - only run once on mount
 
+  // Generate new exercises when difficulty changes (adaptive mode)
+  useEffect(() => {
+    if (card.adaptiveDifficulty && currentDifficulty !== card.difficulty) {
+      const generateNewExercises = async () => {
+        try {
+          // Generate 5 new exercises for the new level
+          const result = await generatePracticeSessionAction({
+            ...card,
+            difficulty: currentDifficulty,
+            exerciseCount: 5
+          });
+          
+          if (result.data && result.data.length > 0) {
+            // Add new exercises to the end
+            setExercises(prev => [...prev, ...result.data]);
+            toast({
+              title: "Nuevos ejercicios agregados",
+              description: `Se agregaron ejercicios del nivel ${currentDifficulty}`,
+            });
+          }
+        } catch (error) {
+          console.error('Error generating new level exercises:', error);
+        }
+      };
+      
+      generateNewExercises();
+    }
+  }, [currentDifficulty, card]);
+
 
   const currentExercise = exercises[currentIndex];
   const progress = exercises.length > 0 ? ((currentIndex + 1) / exercises.length) * 100 : 0;
@@ -144,10 +178,24 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
         
         if (result.data.isCorrect) {
           setCorrectAnswers(prev => prev + 1);
+          setConsecutiveCorrect(prev => prev + 1);
           setShowSolution(true);
           setHint(currentExercise.explanation);
+          
+          // Check for adaptive difficulty level up
+          if (card.adaptiveDifficulty && 
+              consecutiveCorrect + 1 >= 10 && 
+              currentDifficulty < 10) {
+            setCurrentDifficulty(prev => prev + 1);
+            setConsecutiveCorrect(0);
+            toast({
+              title: "¡Nivel superado! 🎉",
+              description: `Has subido al nivel ${currentDifficulty + 1}. ¡Sigue así!`,
+            });
+          }
         } else if (newAttempts >= card.attemptsPerExercise) {
           // No more attempts
+          setConsecutiveCorrect(0); // Reset consecutive counter
           setShowSolution(true);
           setHint(currentExercise.explanation);
           
@@ -156,6 +204,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
             await addCompensationExercise();
           }
         } else {
+          // Wrong answer but still have attempts
+          setConsecutiveCorrect(0); // Reset consecutive counter
+          
           // Get a hint for the next attempt
           const hintResult = await getHintAction(
             currentExercise.problem,
@@ -208,6 +259,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
     try {
       const result = await generatePracticeSessionAction({
         ...card,
+        difficulty: currentDifficulty, // Use current difficulty for adaptive mode
         exerciseCount: 1,
         levelExamples: card.levelExamples
       });
@@ -279,9 +331,19 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">{card.topic}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold">{card.topic}</h2>
+              {card.adaptiveDifficulty && (
+                <Badge variant="secondary" className="gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  Adaptativa
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">
-              Dificultad: {card.difficulty}/10
+              Dificultad: {card.adaptiveDifficulty && currentDifficulty !== card.difficulty 
+                ? `${currentDifficulty}/10 (adaptativa desde ${card.difficulty}/10)` 
+                : `${card.difficulty}/10`}
             </p>
           </div>
           <div className="text-right">
