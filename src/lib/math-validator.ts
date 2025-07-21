@@ -249,6 +249,47 @@ export function analyzeNumberRange(examples: string[]): { min: number; max: numb
   };
 }
 
+// Validate that an exercise respects the number range from examples
+export function validateNumberRange(
+  exercise: { problem: string },
+  expectedRange: { min: number; max: number }
+): { valid: boolean; actualRange?: { min: number; max: number }; error?: string } {
+  // Extract numbers from the exercise
+  const numbers = exercise.problem.match(/\d+/g);
+  if (!numbers || numbers.length === 0) {
+    return { valid: true }; // No numbers to validate
+  }
+  
+  let exerciseMin = Infinity;
+  let exerciseMax = -Infinity;
+  
+  numbers.forEach(numStr => {
+    const num = parseInt(numStr);
+    if (num < exerciseMin) exerciseMin = num;
+    if (num > exerciseMax) exerciseMax = num;
+  });
+  
+  const actualRange = {
+    min: exerciseMin,
+    max: exerciseMax
+  };
+  
+  // Allow some tolerance (e.g., if examples use 35-105, allow 30-110)
+  const tolerance = Math.max(5, Math.floor((expectedRange.max - expectedRange.min) * 0.1));
+  const isValid = exerciseMin >= (expectedRange.min - tolerance) && 
+                  exerciseMax <= (expectedRange.max + tolerance);
+  
+  if (!isValid) {
+    return {
+      valid: false,
+      actualRange,
+      error: `Numbers ${exerciseMin}-${exerciseMax} are outside expected range ${expectedRange.min}-${expectedRange.max}`
+    };
+  }
+  
+  return { valid: true, actualRange };
+}
+
 // Diagnose exercise problems and suggest fixes
 export function diagnoseExercise(exercise: {
   problem: string;

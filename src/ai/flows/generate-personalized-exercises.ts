@@ -50,13 +50,19 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   name: 'generatePersonalizedExercisesPrompt',
   input: {schema: GeneratePersonalizedExercisesInputSchema},
   output: {schema: GeneratePersonalizedExercisesOutputSchema},
-  prompt: `Generate 5 mathematical exercises for:
-
-  Level: {{{level}}}
-  Topic: {{{topic}}}
+  prompt: `<thinking>
+  I need to generate 5 mathematical exercises. Let me carefully analyze what's required:
+  - Level: {{{level}}}
+  - Topic: {{{topic}}}
   {{#if structuredExamples}}
-  
-  CRITICAL - YOU MUST FOLLOW THESE EXACT STRUCTURED EXAMPLES:
+  - I have structured examples to follow. I must analyze the number range used in these examples.
+  {{/if}}
+  </thinking>
+
+  Generate exactly 5 mathematical exercises.
+
+  {{#if structuredExamples}}
+  **MANDATORY: You MUST follow these examples EXACTLY:**
   {{#each structuredExamples}}
   Example {{@index}}:
   - Problem: {{{this.problem}}}
@@ -64,58 +70,33 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   - Explanation: {{{this.explanation}}}
   {{/each}}
   
-  STRICT RULES FOR STRUCTURED EXAMPLES:
-  1. ANALYZE the number range in the examples (e.g., if examples use 1-3, you MUST use 1-3)
-  2. COPY the exact format and structure of the problems
-  3. MATCH the style of explanations provided
-  4. MAINTAIN the same difficulty level
-  5. ALL ANSWERS MUST BE MATHEMATICALLY CORRECT - verify your calculations!
-  6. Your explanations should follow the same pattern as the examples
-  {{else if examples}}
+  **CRITICAL NUMBER RANGE RULE:**
+  - Analyze the numbers in the examples above
+  - If examples use 35, 45, 90, 105 → Use ONLY numbers in range 30-110
+  - If examples use 1, 2, 3 → Use ONLY numbers in range 1-10
+  - NEVER deviate from the number range shown in examples
   
-  CRITICAL - YOU MUST FOLLOW THESE EXACT EXAMPLES:
+  Generate exercises that:
+  1. Use the EXACT same number range as the examples
+  2. Follow the EXACT same problem format
+  3. Have mathematically CORRECT solutions
+  {{else if examples}}
+  **MANDATORY: Follow these example patterns:**
   {{#each examples}}
   - {{{this}}}
   {{/each}}
   
-  STRICT RULES FOR EXAMPLES:
-  1. ANALYZE the number range in the examples (e.g., if examples use 1-3, you MUST use 1-3)
-  2. COPY the exact format and structure
-  3. If example shows "1 + 2 = ?", generate similar like "2 + 1 = ?", NOT "20 + 30 = ?"
-  4. If example shows "1 + ? = 3", generate similar like "2 + ? = 3", keeping same range
-  5. MAINTAIN the same difficulty - don't make it harder or easier
-  6. ALL ANSWERS MUST BE MATHEMATICALLY CORRECT - verify your calculations!
+  Analyze the number range and use ONLY similar numbers.
   {{/if}}
 
-  MATHEMATICAL ACCURACY: 
-  - DOUBLE CHECK all calculations before providing the solution
-  - Solutions MUST be mathematically correct (e.g., 4 + 1 = 5, not 7)
-  - If unsure, recalculate before finalizing
-  {{#if examples}}
-  - Use ONLY numbers in the same range as the examples provided
-  - If examples use single digits (1-9), use ONLY single digits
-  - If examples use two digits (10-99), use ONLY two digits
-  {{else}}
-  - Adapt the format to the mathematical concept requested
-  - For basic operations (suma, resta, etc.): show as "25 + 17 = ?"
-  - For mathematical concepts: create exercises that demonstrate the concept
-  - For properties: show examples and verification exercises
-  {{/if}}
-  - NO word problems or story problems
-  
   {{#unless examples}}
-  Adapt difficulty to level:
-  - Beginner: Simple numbers (1-10), basic concepts
-  - Intermediate: Moderate complexity (1-50)
-  - Advanced: Complex problems, larger numbers (1-100+)
-
-  Examples of how to interpret topics:
-  - "propiedades conmutativas" → "3 + 5 = ? y 5 + 3 = ?" or "Verifica: 7 × 4 = 4 × 7"
-  - "números primos" → "¿Es 17 primo?" or "Encuentra el siguiente primo después de 23"
-  - "fracciones" → "1/2 + 1/4 = ?" or "Simplifica: 6/8 = ?"
+  For topic "{{{topic}}}" at {{{level}}} level:
+  - Beginner: numbers 1-10
+  - Intermediate: numbers 10-50  
+  - Advanced: numbers 50-100+
   {{/unless}}
   
-  Return JSON with problem, solution (VERIFIED TO BE CORRECT), and brief explanation.`,
+  Return JSON with problem, solution, and explanation for each exercise.`,
 });
 
 const generatePersonalizedExercisesFlow = ai.defineFlow(

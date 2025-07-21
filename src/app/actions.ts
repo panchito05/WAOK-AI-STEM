@@ -333,14 +333,41 @@ async function validateAndFixExercises(
     structuredExamples?: { [level: number]: { problem: string; solution: string; explanation: string }[] };
   }
 ): Promise<any[]> {
-  const { isValidExercise, diagnoseExercise } = await import('@/lib/math-validator');
+  const { isValidExercise, diagnoseExercise, analyzeNumberRange, validateNumberRange } = await import('@/lib/math-validator');
   const validExercises: any[] = [];
   const invalidIndices: number[] = [];
+  
+  // Analyze expected number range from examples
+  let expectedRange: { min: number; max: number } | null = null;
+  if (card.structuredExamples?.[card.difficulty]?.length > 0) {
+    const exampleProblems = card.structuredExamples[card.difficulty].map(e => e.problem);
+    expectedRange = analyzeNumberRange(exampleProblems);
+    console.log(`Expected number range from examples: ${expectedRange.min}-${expectedRange.max}`);
+  } else if (card.levelExamples?.[card.difficulty]?.length > 0) {
+    expectedRange = analyzeNumberRange(card.levelExamples[card.difficulty]);
+    console.log(`Expected number range from examples: ${expectedRange.min}-${expectedRange.max}`);
+  }
   
   // First pass: identify valid and invalid exercises
   exercises.forEach((exercise, index) => {
     const validation = isValidExercise(exercise);
-    if (validation.valid) {
+    let isValid = validation.valid;
+    
+    // Also check number range if we have examples
+    if (isValid && expectedRange) {
+      const rangeValidation = validateNumberRange(exercise, expectedRange);
+      if (!rangeValidation.valid) {
+        isValid = false;
+        console.warn(`Exercise at index ${index} violates number range:`, {
+          problem: exercise.problem,
+          expectedRange,
+          actualRange: rangeValidation.actualRange,
+          error: rangeValidation.error
+        });
+      }
+    }
+    
+    if (isValid) {
       validExercises.push(exercise);
     } else {
       invalidIndices.push(index);
