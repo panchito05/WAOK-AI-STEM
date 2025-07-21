@@ -72,6 +72,7 @@ export default function DrawingCanvasSimple({
   const [isDraggingText, setIsDraggingText] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [textBounds, setTextBounds] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [cursorStyle, setCursorStyle] = useState<string>('crosshair');
 
   // Centralized redraw function
   const redrawCanvas = useCallback(() => {
@@ -83,7 +84,10 @@ export default function DrawingCanvasSimple({
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Redraw all lines
+    // Draw the operation text FIRST (so it appears behind drawings)
+    drawOperationText(ctx, canvas);
+
+    // Redraw all lines AFTER (so they appear on top)
     lines.forEach(line => {
       ctx.beginPath();
       ctx.moveTo(line.points[0], line.points[1]);
@@ -97,9 +101,6 @@ export default function DrawingCanvasSimple({
       ctx.globalCompositeOperation = line.tool === 'eraser' ? 'destination-out' : 'source-over';
       ctx.stroke();
     });
-
-    // Draw the operation text
-    drawOperationText(ctx, canvas);
   }, [lines, operationText, textPosition]);
 
   // Function to draw operation text
@@ -187,12 +188,17 @@ export default function DrawingCanvasSimple({
 
   const startInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const { x, y } = getCoords(e);
-    if (isMouseOverText(x, y)) {
+    
+    // If not currently drawing and clicking on text, start dragging
+    if (!isDrawing && isMouseOverText(x, y)) {
       setIsDraggingText(true);
       setDragOffset({ x: x - textPosition.x * (canvasRef.current?.width || 0), y: y - textPosition.y * (canvasRef.current?.height || 0) });
-      if (canvasRef.current) canvasRef.current.style.cursor = 'grabbing';
+      setCursorStyle('grabbing');
     } else {
-      setIsDrawing(true);
+      // Otherwise, start or continue drawing
+      if (!isDrawing) {
+        setIsDrawing(true);
+      }
       const newLine: Line = {
         tool,
         points: [x, y],
@@ -201,6 +207,18 @@ export default function DrawingCanvasSimple({
       };
       setLines(prev => [...prev, newLine]);
     }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDraggingText && !isDrawing) {
+      const { x, y } = getCoords(e);
+      const newCursor = isMouseOverText(x, y) ? 'pointer' : (tool === 'eraser' ? 'grab' : 'crosshair');
+      if (newCursor !== cursorStyle) {
+        setCursorStyle(newCursor);
+      }
+    }
+    // Continue with moveInteraction logic
+    moveInteraction(e);
   };
 
   const moveInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -231,7 +249,8 @@ export default function DrawingCanvasSimple({
   const stopInteraction = () => {
     setIsDrawing(false);
     setIsDraggingText(false);
-    if (canvasRef.current) canvasRef.current.style.cursor = 'crosshair';
+    // Reset cursor to default based on tool
+    setCursorStyle(tool === 'eraser' ? 'grab' : 'crosshair');
   };
 
   const handleClear = () => {
@@ -304,13 +323,13 @@ export default function DrawingCanvasSimple({
           ref={canvasRef}
           className="absolute top-0 left-0 touch-none"
           onMouseDown={startInteraction}
-          onMouseMove={moveInteraction}
+          onMouseMove={handleMouseMove}
           onMouseUp={stopInteraction}
           onMouseLeave={stopInteraction}
           onTouchStart={startInteraction}
           onTouchMove={moveInteraction}
           onTouchEnd={stopInteraction}
-          style={{ cursor: tool === 'eraser' ? 'grab' : 'crosshair' }}
+          style={{ cursor: cursorStyle }}
         />
       </Card>
 
