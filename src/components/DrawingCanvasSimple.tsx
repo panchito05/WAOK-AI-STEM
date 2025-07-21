@@ -12,8 +12,10 @@ import {
   Download,
   Palette,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Trophy
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 // Define line structure
 interface Line {
@@ -40,6 +42,13 @@ interface DrawingCanvasSimpleProps {
   onNext?: () => void;
   isLastExercise?: boolean;
   cardId?: string;
+  // Progress info props
+  currentIndex?: number;
+  totalExercises?: number;
+  correctAnswers?: number;
+  topic?: string;
+  difficulty?: number;
+  onRevealSolution?: () => void;
 }
 
 const COLORS = [
@@ -59,7 +68,13 @@ export default function DrawingCanvasSimple({
   hint,
   onNext,
   isLastExercise = false,
-  cardId
+  cardId,
+  currentIndex = 0,
+  totalExercises = 0,
+  correctAnswers = 0,
+  topic,
+  difficulty,
+  onRevealSolution
 }: DrawingCanvasSimpleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [lines, setLines] = useState<Line[]>([]);
@@ -295,6 +310,24 @@ export default function DrawingCanvasSimple({
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
         </div>
+        
+        {/* Progress info - only show in fullscreen */}
+        {isFullscreen && totalExercises > 0 && (
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="text-xs">
+              {currentIndex + 1} / {totalExercises}
+            </Badge>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Trophy className="h-3.5 w-3.5" />
+              <span>{correctAnswers} correctas</span>
+            </div>
+            {topic && <span className="text-xs font-medium">{topic}</span>}
+            {difficulty !== undefined && (
+              <span className="text-xs text-muted-foreground">Dificultad: {difficulty}/10</span>
+            )}
+          </div>
+        )}
+        
         {tool === 'pen' && (
           <div className="flex items-center gap-1">
             <Palette className="h-4 w-4 text-muted-foreground mr-2" />
@@ -352,6 +385,7 @@ export default function DrawingCanvasSimple({
           onNext={onNext}
           isLastExercise={isLastExercise}
           cardId={cardId}
+          onRevealSolution={onRevealSolution}
         />
       )}
     </div>

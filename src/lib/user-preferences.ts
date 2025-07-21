@@ -2,6 +2,9 @@ export interface UserPreferences {
   autoAdvance: {
     [cardId: string]: boolean;
   };
+  keepNumpadOpen: {
+    [cardId: string]: boolean;
+  };
 }
 
 const PREFERENCES_KEY = 'mathminds_preferences';
@@ -9,16 +12,21 @@ const PREFERENCES_KEY = 'mathminds_preferences';
 export const userPreferences = {
   // Get all preferences
   getAll(): UserPreferences {
-    if (typeof window === 'undefined') return { autoAdvance: {} };
+    if (typeof window === 'undefined') return { autoAdvance: {}, keepNumpadOpen: {} };
     
     try {
       const stored = localStorage.getItem(PREFERENCES_KEY);
-      if (!stored) return { autoAdvance: {} };
+      if (!stored) return { autoAdvance: {}, keepNumpadOpen: {} };
       
-      return JSON.parse(stored) as UserPreferences;
+      const parsed = JSON.parse(stored) as UserPreferences;
+      // Ensure keepNumpadOpen exists for backward compatibility
+      if (!parsed.keepNumpadOpen) {
+        parsed.keepNumpadOpen = {};
+      }
+      return parsed;
     } catch (error) {
       console.error('Error loading preferences:', error);
-      return { autoAdvance: {} };
+      return { autoAdvance: {}, keepNumpadOpen: {} };
     }
   },
 
@@ -41,6 +49,25 @@ export const userPreferences = {
     }
   },
 
+  // Get keep numpad open preference for a specific card
+  getKeepNumpadOpen(cardId: string): boolean {
+    const prefs = this.getAll();
+    return prefs.keepNumpadOpen[cardId] ?? false;
+  },
+
+  // Set keep numpad open preference for a specific card
+  setKeepNumpadOpen(cardId: string, enabled: boolean): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const prefs = this.getAll();
+      prefs.keepNumpadOpen[cardId] = enabled;
+      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+    }
+  },
+
   // Clear preferences for a specific card
   clearCardPreferences(cardId: string): void {
     if (typeof window === 'undefined') return;
@@ -48,6 +75,7 @@ export const userPreferences = {
     try {
       const prefs = this.getAll();
       delete prefs.autoAdvance[cardId];
+      delete prefs.keepNumpadOpen[cardId];
       localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
     } catch (error) {
       console.error('Error clearing card preferences:', error);

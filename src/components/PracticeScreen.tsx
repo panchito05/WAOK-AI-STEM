@@ -399,6 +399,12 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
                     onNext={handleNextExercise}
                     isLastExercise={currentIndex === exercises.length - 1}
                     cardId={card.id}
+                    currentIndex={currentIndex}
+                    totalExercises={exercises.length}
+                    correctAnswers={correctAnswers}
+                    topic={card.topic}
+                    difficulty={card.adaptiveDifficulty ? currentDifficulty : card.difficulty}
+                    onRevealSolution={handleRevealSolution}
                   />
                 </>
               );

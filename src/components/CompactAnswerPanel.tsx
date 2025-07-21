@@ -34,6 +34,7 @@ interface CompactAnswerPanelProps {
   onNext?: () => void;
   isLastExercise?: boolean;
   cardId?: string;
+  onRevealSolution?: () => void;
 }
 
 export default function CompactAnswerPanel({
@@ -47,7 +48,8 @@ export default function CompactAnswerPanel({
   hint,
   onNext,
   isLastExercise = false,
-  cardId
+  cardId,
+  onRevealSolution
 }: CompactAnswerPanelProps) {
   const [answer, setAnswer] = useState('');
   const [showNumpad, setShowNumpad] = useState(false);
@@ -56,6 +58,7 @@ export default function CompactAnswerPanel({
   const [isHovered, setIsHovered] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
+  const [keepNumpadOpen, setKeepNumpadOpen] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   
@@ -134,11 +137,13 @@ export default function CompactAnswerPanel({
     return () => clearTimeout(timer);
   }, [showNumpad, isDragging, position.y, showSolution, solution]);
 
-  // Load auto-advance preference on mount
+  // Load user preferences on mount
   useEffect(() => {
     if (cardId) {
-      const savedPreference = userPreferences.getAutoAdvance(cardId);
-      setAutoAdvance(savedPreference);
+      const savedAutoAdvance = userPreferences.getAutoAdvance(cardId);
+      setAutoAdvance(savedAutoAdvance);
+      const savedKeepNumpad = userPreferences.getKeepNumpadOpen(cardId);
+      setKeepNumpadOpen(savedKeepNumpad);
     }
   }, [cardId]);
 
@@ -177,6 +182,14 @@ export default function CompactAnswerPanel({
     }
   };
 
+  // Handle keep numpad open preference change
+  const handleKeepNumpadOpenChange = (checked: boolean) => {
+    setKeepNumpadOpen(checked);
+    if (cardId) {
+      userPreferences.setKeepNumpadOpen(cardId, checked);
+    }
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (answer.trim() && canSubmit) {
@@ -184,8 +197,10 @@ export default function CompactAnswerPanel({
       if (!feedback?.isCorrect) {
         setAnswer('');
       }
-      // Auto-hide numpad after submitting
-      setTimeout(() => setShowNumpad(false), 500);
+      // Auto-hide numpad after submitting (unless user wants to keep it open)
+      if (!keepNumpadOpen) {
+        setTimeout(() => setShowNumpad(false), 500);
+      }
     }
   };
 
@@ -321,6 +336,18 @@ export default function CompactAnswerPanel({
             </Button>
           </form>
 
+          {/* Reveal answer button when out of attempts */}
+          {remainingAttempts === 0 && !showSolution && onRevealSolution && (
+            <Button
+              onClick={onRevealSolution}
+              variant="outline"
+              className="w-full h-9"
+              size="sm"
+            >
+              Mostrar respuesta
+            </Button>
+          )}
+
           {/* Feedback */}
           {feedback && (
             <Alert className={cn(
@@ -411,8 +438,42 @@ export default function CompactAnswerPanel({
 
           {/* Numpad */}
           {showNumpad && !showSolution && (
-            <div className="grid grid-cols-3 gap-1 pt-2 border-t">
-              {numpadButtons.map((btn) => (
+            <>
+              {/* Keep numpad open preference */}
+              <div className="mt-2 mb-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors cursor-pointer group"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleKeepNumpadOpenChange(!keepNumpadOpen);
+                        }}
+                      >
+                        <Checkbox
+                          id="keep-numpad-open"
+                          checked={keepNumpadOpen}
+                          onCheckedChange={handleKeepNumpadOpenChange}
+                          className="h-3 w-3 border-2 border-gray-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 data-[state=checked]:text-white pointer-events-none"
+                        />
+                        <label
+                          htmlFor="keep-numpad-open"
+                          className="text-xs font-medium select-none text-gray-700 group-hover:text-gray-900 pointer-events-none"
+                        >
+                          Mantener teclado abierto
+                        </label>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">El teclado permanecerá abierto después de cada respuesta</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-1 pt-2 border-t">
+                {numpadButtons.map((btn) => (
                 <Button
                   key={btn}
                   variant={btn === 'C' ? 'destructive' : btn === '←' ? 'secondary' : 'outline'}
@@ -427,7 +488,8 @@ export default function CompactAnswerPanel({
                   {btn}
                 </Button>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
       </Card>
