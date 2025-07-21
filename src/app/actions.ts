@@ -330,6 +330,7 @@ async function validateAndFixExercises(
     difficulty: number;
     customInstructions: string;
     levelExamples?: { [level: number]: string[] };
+    structuredExamples?: { [level: number]: { problem: string; solution: string; explanation: string }[] };
   }
 ): Promise<any[]> {
   const { isValidExercise, diagnoseExercise } = await import('@/lib/math-validator');
@@ -368,10 +369,14 @@ async function validateAndFixExercises(
       
       try {
         // Generate a single replacement exercise
+        const structuredExamples = card.structuredExamples?.[card.difficulty] || [];
+        const levelExamples = card.levelExamples?.[card.difficulty] || [];
+        
         const replacement = await generatePersonalizedExercises({
           level: card.difficulty <= 3 ? 'beginner' : card.difficulty <= 6 ? 'intermediate' : 'advanced',
           topic: card.topic,
-          examples: card.levelExamples?.[card.difficulty] || []
+          examples: structuredExamples.length > 0 ? undefined : levelExamples,
+          structuredExamples: structuredExamples.length > 0 ? structuredExamples : undefined
         });
         
         if (replacement.exercises && replacement.exercises.length > 0) {
@@ -421,16 +426,21 @@ export async function generatePracticeSessionAction(card: {
   customInstructions: string;
   exerciseCount: number;
   levelExamples?: { [level: number]: string[] };
+  structuredExamples?: { [level: number]: { problem: string; solution: string; explanation: string }[] };
 }) {
   try {
-    // Get examples for the current difficulty level
+    // Get examples for the current difficulty level (prefer structured over legacy)
+    const currentStructuredExamples = card.structuredExamples?.[card.difficulty] || [];
     const currentLevelExamples = card.levelExamples?.[card.difficulty] || [];
     
     // If we have examples, add clear instructions about number range
     let enhancedInstructions = card.customInstructions || '';
-    if (currentLevelExamples.length > 0) {
+    if (currentStructuredExamples.length > 0 || currentLevelExamples.length > 0) {
       const { analyzeNumberRange } = await import('@/lib/math-validator');
-      const range = analyzeNumberRange(currentLevelExamples);
+      const examplesForRange = currentStructuredExamples.length > 0 
+        ? currentStructuredExamples.map(e => e.problem)
+        : currentLevelExamples;
+      const range = analyzeNumberRange(examplesForRange);
       enhancedInstructions += `\nIMPORTANT: Use ONLY numbers between ${range.min} and ${range.max} as shown in the examples.`;
     }
 
@@ -438,7 +448,8 @@ export async function generatePracticeSessionAction(card: {
     const result = await generatePersonalizedExercises({
       level: card.difficulty <= 3 ? 'beginner' : card.difficulty <= 6 ? 'intermediate' : 'advanced',
       topic: card.topic,
-      examples: currentLevelExamples
+      examples: currentStructuredExamples.length > 0 ? undefined : currentLevelExamples,
+      structuredExamples: currentStructuredExamples.length > 0 ? currentStructuredExamples : undefined
     });
 
     // Transform to expected format and validate
@@ -465,7 +476,8 @@ export async function generatePracticeSessionAction(card: {
       const additionalResult = await generatePersonalizedExercises({
         level: card.difficulty <= 3 ? 'beginner' : card.difficulty <= 6 ? 'intermediate' : 'advanced',
         topic: card.topic,
-        examples: currentLevelExamples
+        examples: currentStructuredExamples.length > 0 ? undefined : currentLevelExamples,
+        structuredExamples: currentStructuredExamples.length > 0 ? currentStructuredExamples : undefined
       });
       
       for (const ex of additionalResult.exercises) {

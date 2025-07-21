@@ -13,15 +13,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { Plus, X, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import type { StructuredExample } from '@/lib/storage';
 
 interface LevelExamplesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   level: number;
-  examples: string[];
+  examples: string[]; // Mantener para compatibilidad
+  structuredExamples?: StructuredExample[]; // Nueva estructura
   onUpdateExamples: (examples: string[]) => void;
+  onUpdateStructuredExamples?: (examples: StructuredExample[]) => void;
 }
 
 export default function LevelExamplesDialog({
@@ -29,31 +33,50 @@ export default function LevelExamplesDialog({
   onOpenChange,
   level,
   examples,
+  structuredExamples,
   onUpdateExamples,
+  onUpdateStructuredExamples,
 }: LevelExamplesDialogProps) {
-  const [newExample, setNewExample] = useState('');
+  const [newProblem, setNewProblem] = useState('');
+  const [newSolution, setNewSolution] = useState('');
+  const [newExplanation, setNewExplanation] = useState('');
   const { toast } = useToast();
 
+  // Usar ejemplos estructurados si están disponibles
+  const hasStructuredExamples = onUpdateStructuredExamples && structuredExamples;
+  const currentExamples = structuredExamples || [];
+  const legacyExamples = !hasStructuredExamples ? examples : [];
+
   const handleAddExample = () => {
-    if (!newExample.trim()) {
+    if (!newProblem.trim()) {
       toast({
         title: 'Error',
-        description: 'El ejemplo no puede estar vacío',
+        description: 'El problema no puede estar vacío',
         variant: 'destructive',
       });
       return;
     }
 
-    if (newExample.length > 500) {
+    if (!newSolution.trim()) {
       toast({
         title: 'Error',
-        description: 'El ejemplo no puede tener más de 500 caracteres',
+        description: 'La solución no puede estar vacía',
         variant: 'destructive',
       });
       return;
     }
 
-    if (examples.length >= 10) {
+    if (!newExplanation.trim()) {
+      toast({
+        title: 'Error',
+        description: 'La explicación no puede estar vacía',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const totalExamples = hasStructuredExamples ? currentExamples.length : legacyExamples.length;
+    if (totalExamples >= 10) {
       toast({
         title: 'Error',
         description: 'Máximo 10 ejemplos por nivel',
@@ -62,8 +85,25 @@ export default function LevelExamplesDialog({
       return;
     }
 
-    onUpdateExamples([...examples, newExample.trim()]);
-    setNewExample('');
+    if (hasStructuredExamples && onUpdateStructuredExamples) {
+      // Usar formato estructurado
+      const newExample: StructuredExample = {
+        problem: newProblem.trim(),
+        solution: newSolution.trim(),
+        explanation: newExplanation.trim(),
+      };
+      onUpdateStructuredExamples([...currentExamples, newExample]);
+    } else {
+      // Fallback al formato antiguo (solo para compatibilidad)
+      const legacyFormat = `${newProblem.trim()} (Respuesta: ${newSolution.trim()})`;
+      onUpdateExamples([...legacyExamples, legacyFormat]);
+    }
+
+    // Limpiar campos
+    setNewProblem('');
+    setNewSolution('');
+    setNewExplanation('');
+    
     toast({
       title: 'Ejemplo agregado',
       description: `Ejemplo agregado para el nivel ${level}`,
@@ -71,8 +111,13 @@ export default function LevelExamplesDialog({
   };
 
   const handleRemoveExample = (index: number) => {
-    const updatedExamples = examples.filter((_, i) => i !== index);
-    onUpdateExamples(updatedExamples);
+    if (hasStructuredExamples && onUpdateStructuredExamples) {
+      const updatedExamples = currentExamples.filter((_, i) => i !== index);
+      onUpdateStructuredExamples(updatedExamples);
+    } else {
+      const updatedExamples = legacyExamples.filter((_, i) => i !== index);
+      onUpdateExamples(updatedExamples);
+    }
   };
 
   const getDifficultyLabel = (level: number) => {
@@ -91,7 +136,7 @@ export default function LevelExamplesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Ejemplos para Nivel {level}
@@ -100,7 +145,7 @@ export default function LevelExamplesDialog({
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            Agrega ejemplos de ejercicios para que la IA genere problemas similares.
+            Agrega ejemplos completos de ejercicios para que la IA genere problemas similares.
           </DialogDescription>
         </DialogHeader>
 
@@ -109,44 +154,78 @@ export default function LevelExamplesDialog({
           <div className="rounded-lg border bg-muted/50 p-3 flex gap-2">
             <Info className="h-4 w-4 text-muted-foreground mt-0.5" />
             <div className="text-sm text-muted-foreground space-y-1">
-              <p>Ejemplos de formato:</p>
+              <p>La IA generará ejercicios similares a tus ejemplos:</p>
               <ul className="list-disc list-inside space-y-0.5">
-                <li>Completo: <code className="font-mono">1 + 2 = 3</code></li>
-                <li>Con incógnita: <code className="font-mono">1 + ? = 3</code> o <code className="font-mono">? + 2 = 3</code></li>
-                <li>Solo problema: <code className="font-mono">15 ÷ 3 = ?</code></li>
+                <li>Mantendrá el mismo rango de números</li>
+                <li>Usará el mismo formato de problema</li>
+                <li>Incluirá explicaciones similares</li>
               </ul>
             </div>
           </div>
 
-          {/* Add new example */}
-          <div className="space-y-2">
-            <Label htmlFor="new-example">Nuevo ejemplo</Label>
-            <div className="flex gap-2">
+          {/* Add new example form */}
+          <div className="space-y-4 rounded-lg border p-4">
+            <h4 className="font-medium">Agregar nuevo ejemplo</h4>
+            
+            <div className="space-y-2">
+              <Label htmlFor="problem">Problema</Label>
               <Input
-                id="new-example"
-                placeholder="ej. 5 + ? = 12"
-                value={newExample}
-                onChange={(e) => setNewExample(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddExample()}
-                maxLength={500}
+                id="problem"
+                placeholder="ej. 5 + 7 = ?"
+                value={newProblem}
+                onChange={(e) => setNewProblem(e.target.value)}
+                maxLength={200}
               />
-              <Button 
-                onClick={handleAddExample}
-                disabled={!newExample.trim() || examples.length >= 10}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar
-              </Button>
+              <p className="text-xs text-muted-foreground">
+                Escribe el problema matemático con "?" para la incógnita
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {newExample.length}/500 caracteres • {examples.length}/10 ejemplos
-            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="solution">Solución</Label>
+              <Input
+                id="solution"
+                placeholder="ej. 12"
+                value={newSolution}
+                onChange={(e) => setNewSolution(e.target.value)}
+                maxLength={100}
+              />
+              <p className="text-xs text-muted-foreground">
+                La respuesta correcta al problema
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="explanation">Explicación</Label>
+              <Textarea
+                id="explanation"
+                placeholder="ej. Para resolver 5 + 7, sumamos: 5 + 7 = 12"
+                value={newExplanation}
+                onChange={(e) => setNewExplanation(e.target.value)}
+                maxLength={500}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Cómo resolver el problema paso a paso
+              </p>
+            </div>
+
+            <Button 
+              onClick={handleAddExample}
+              disabled={!newProblem.trim() || !newSolution.trim() || !newExplanation.trim()}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar Ejemplo
+            </Button>
           </div>
 
           {/* Examples list */}
           <div className="space-y-2">
-            <Label>Ejemplos actuales ({examples.length})</Label>
-            {examples.length === 0 ? (
+            <Label>
+              Ejemplos actuales ({hasStructuredExamples ? currentExamples.length : legacyExamples.length})
+            </Label>
+            {(hasStructuredExamples ? currentExamples.length === 0 : legacyExamples.length === 0) ? (
               <div className="rounded-lg border border-dashed p-8 text-center">
                 <p className="text-sm text-muted-foreground">
                   No hay ejemplos para este nivel aún
@@ -154,23 +233,56 @@ export default function LevelExamplesDialog({
               </div>
             ) : (
               <ScrollArea className="h-[300px] rounded-lg border p-4">
-                <div className="space-y-2">
-                  {examples.map((example, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between gap-2 rounded-lg border bg-background p-3"
-                    >
-                      <code className="font-mono text-sm flex-1">{example}</code>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveExample(index)}
-                        className="h-8 w-8"
+                <div className="space-y-3">
+                  {hasStructuredExamples ? (
+                    // Mostrar ejemplos estructurados
+                    currentExamples.map((example, index) => (
+                      <div
+                        key={index}
+                        className="rounded-lg border bg-background p-4 space-y-2"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1 flex-1">
+                            <p className="font-mono text-sm">
+                              <span className="text-muted-foreground">Problema:</span> {example.problem}
+                            </p>
+                            <p className="font-mono text-sm">
+                              <span className="text-muted-foreground">Solución:</span> {example.solution}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              <span className="text-muted-foreground">Explicación:</span> {example.explanation}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveExample(index)}
+                            className="h-8 w-8 ml-2"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    // Mostrar ejemplos legacy (string)
+                    legacyExamples.map((example, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between gap-2 rounded-lg border bg-background p-3"
+                      >
+                        <code className="font-mono text-sm flex-1">{example}</code>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveExample(index)}
+                          className="h-8 w-8"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </ScrollArea>
             )}

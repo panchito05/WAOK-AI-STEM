@@ -1,3 +1,10 @@
+// Estructura para ejemplos con formato completo
+export interface StructuredExample {
+  problem: string;
+  solution: string;
+  explanation: string;
+}
+
 export interface PracticeCard {
   id: string;
   name: string;
@@ -11,11 +18,52 @@ export interface PracticeCard {
   createdAt: string;
   updatedAt: string;
   levelExamples?: {
-    [level: number]: string[]; // Nivel 1-10 con array de ejemplos
+    [level: number]: string[]; // Nivel 1-10 con array de ejemplos - Mantener para compatibilidad
+  };
+  structuredExamples?: {
+    [level: number]: StructuredExample[]; // Nueva estructura con formato completo
   };
 }
 
 const STORAGE_KEY = 'mathminds_practice_cards';
+
+// Función para migrar ejemplos de string[] a StructuredExample[]
+function migrateExamples(levelExamples: { [level: number]: string[] }): { [level: number]: StructuredExample[] } {
+  const migrated: { [level: number]: StructuredExample[] } = {};
+  
+  for (const [level, examples] of Object.entries(levelExamples)) {
+    migrated[Number(level)] = examples.map(example => {
+      // Intentar parsear diferentes formatos de ejemplos legacy
+      const matches = example.match(/^(.+?)\s*(?:\(Respuesta:\s*(.+?)\))?$/);
+      
+      if (matches) {
+        const problem = matches[1].trim();
+        const solution = matches[2]?.trim() || '';
+        
+        // Generar una explicación básica si no hay una
+        let explanation = `Para resolver ${problem}`;
+        if (solution) {
+          explanation += `, la respuesta es ${solution}`;
+        }
+        
+        return {
+          problem,
+          solution: solution || 'Ver solución',
+          explanation
+        };
+      }
+      
+      // Fallback para formatos no reconocidos
+      return {
+        problem: example,
+        solution: 'Ver solución',
+        explanation: 'Ejemplo migrado del formato anterior'
+      };
+    });
+  }
+  
+  return migrated;
+}
 
 export const cardStorage = {
   // Get all cards
@@ -27,8 +75,20 @@ export const cardStorage = {
       if (!stored) return [];
       
       const cards = JSON.parse(stored) as PracticeCard[];
+      
+      // Migrar ejemplos si es necesario
+      const migratedCards = cards.map(card => {
+        if (card.levelExamples && !card.structuredExamples) {
+          return {
+            ...card,
+            structuredExamples: migrateExamples(card.levelExamples)
+          };
+        }
+        return card;
+      });
+      
       // Sort by favorites first, then by updated date
-      return cards.sort((a, b) => {
+      return migratedCards.sort((a, b) => {
         if (a.isFavorite && !b.isFavorite) return -1;
         if (!a.isFavorite && b.isFavorite) return 1;
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PracticeCard } from '@/lib/storage';
+import { PracticeCard, StructuredExample } from '@/lib/storage';
 import { useCards } from '@/hooks/use-cards';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,6 +66,9 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const [examplesDialogOpen, setExamplesDialogOpen] = useState(false);
   const [levelExamples, setLevelExamples] = useState<{ [level: number]: string[] }>(
     card?.levelExamples || {}
+  );
+  const [structuredExamples, setStructuredExamples] = useState<{ [level: number]: StructuredExample[] }>(
+    card?.structuredExamples || {}
   );
 
   const form = useForm<FormValues>({
@@ -137,11 +140,13 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
         // Update existing card
         savedCard = await updateCard(card.id, {
           ...values,
-          levelExamples: levelExamples
+          levelExamples: levelExamples,
+          structuredExamples: structuredExamples
         });
         
         // Clear cache if topic, difficulty, instructions, or examples changed
-        const examplesChanged = JSON.stringify(card.levelExamples) !== JSON.stringify(levelExamples);
+        const examplesChanged = JSON.stringify(card.levelExamples) !== JSON.stringify(levelExamples) ||
+                               JSON.stringify(card.structuredExamples) !== JSON.stringify(structuredExamples);
         if (card.topic !== values.topic || 
             card.difficulty !== values.difficulty || 
             card.customInstructions !== values.customInstructions ||
@@ -159,7 +164,9 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
               id: savedCard.id,
               topic: savedCard.topic,
               difficulty: savedCard.difficulty,
-              customInstructions: savedCard.customInstructions
+              customInstructions: savedCard.customInstructions,
+              levelExamples: savedCard.levelExamples,
+              structuredExamples: savedCard.structuredExamples
             });
           }
         }
@@ -169,7 +176,8 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
           ...values,
           customInstructions: values.customInstructions || '',
           isFavorite: false,
-          levelExamples: levelExamples
+          levelExamples: levelExamples,
+          structuredExamples: structuredExamples
         });
         
         // Preload exercises for new card
@@ -299,9 +307,9 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
                   <div className="flex items-center justify-between mb-2">
                     <FormLabel>Nivel de Dificultad</FormLabel>
                     <div className="flex items-center gap-2">
-                      {levelExamples[field.value]?.length > 0 && (
+                      {(structuredExamples[field.value]?.length > 0 || levelExamples[field.value]?.length > 0) && (
                         <Badge variant="outline" className="text-xs">
-                          {levelExamples[field.value].length} ejemplo{levelExamples[field.value].length !== 1 ? 's' : ''}
+                          {structuredExamples[field.value]?.length || levelExamples[field.value]?.length} ejemplo{(structuredExamples[field.value]?.length || levelExamples[field.value]?.length) !== 1 ? 's' : ''}
                         </Badge>
                       )}
                       <Button
@@ -487,8 +495,15 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
         onOpenChange={setExamplesDialogOpen}
         level={difficulty}
         examples={levelExamples[difficulty] || []}
+        structuredExamples={structuredExamples[difficulty]}
         onUpdateExamples={(examples) => {
           setLevelExamples(prev => ({
+            ...prev,
+            [difficulty]: examples
+          }));
+        }}
+        onUpdateStructuredExamples={(examples) => {
+          setStructuredExamples(prev => ({
             ...prev,
             [difficulty]: examples
           }));

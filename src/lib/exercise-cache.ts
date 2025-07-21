@@ -144,6 +144,7 @@ export const exerciseCache = {
     difficulty: number;
     customInstructions: string;
     levelExamples?: { [level: number]: string[] };
+    structuredExamples?: { [level: number]: { problem: string; solution: string; explanation: string }[] };
   }): Promise<void> {
     try {
       console.log(`Preloading exercises for card ${card.id}...`);
@@ -154,7 +155,8 @@ export const exerciseCache = {
         difficulty: card.difficulty,
         customInstructions: card.customInstructions,
         exerciseCount: TARGET_POOL_SIZE,
-        levelExamples: card.levelExamples
+        levelExamples: card.levelExamples,
+        structuredExamples: card.structuredExamples
       });
       
       if (result.data) {
@@ -192,7 +194,8 @@ export const exerciseCache = {
           difficulty: card.difficulty,
           customInstructions: card.customInstructions,
           exerciseCount: needed,
-          levelExamples: card.levelExamples
+          levelExamples: card.levelExamples,
+          structuredExamples: card.structuredExamples
         });
         
         if (result.data) {
@@ -242,6 +245,7 @@ export const exerciseCache = {
     customInstructions: string;
     exerciseCount: number;
     levelExamples?: { [level: number]: string[] };
+    structuredExamples?: { [level: number]: { problem: string; solution: string; explanation: string }[] };
   }): Promise<Exercise[]> {
     const currentPool = this.getWithoutConsuming(card.id, card.exerciseCount);
     
@@ -259,7 +263,8 @@ export const exerciseCache = {
         difficulty: card.difficulty,
         customInstructions: card.customInstructions,
         exerciseCount: card.exerciseCount,
-        levelExamples: card.levelExamples
+        levelExamples: card.levelExamples,
+        structuredExamples: card.structuredExamples
       });
       
       if (result.data) {

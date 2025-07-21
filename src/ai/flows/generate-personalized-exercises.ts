@@ -17,6 +17,11 @@ const GeneratePersonalizedExercisesInputSchema = z.object({
   level: z.string().describe('The student\'s level (e.g., beginner, intermediate, advanced).'),
   topic: z.string().describe('The math topic for which to generate exercises (e.g., addition, subtraction, algebra).'),
   examples: z.array(z.string()).optional().describe('Example exercises to follow for format and style.'),
+  structuredExamples: z.array(z.object({
+    problem: z.string(),
+    solution: z.string(),
+    explanation: z.string()
+  })).optional().describe('Structured examples with complete problem, solution, and explanation.'),
 });
 export type GeneratePersonalizedExercisesInput = z.infer<
   typeof GeneratePersonalizedExercisesInputSchema
@@ -49,7 +54,24 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
 
   Level: {{{level}}}
   Topic: {{{topic}}}
-  {{#if examples}}
+  {{#if structuredExamples}}
+  
+  CRITICAL - YOU MUST FOLLOW THESE EXACT STRUCTURED EXAMPLES:
+  {{#each structuredExamples}}
+  Example {{@index}}:
+  - Problem: {{{this.problem}}}
+  - Solution: {{{this.solution}}}
+  - Explanation: {{{this.explanation}}}
+  {{/each}}
+  
+  STRICT RULES FOR STRUCTURED EXAMPLES:
+  1. ANALYZE the number range in the examples (e.g., if examples use 1-3, you MUST use 1-3)
+  2. COPY the exact format and structure of the problems
+  3. MATCH the style of explanations provided
+  4. MAINTAIN the same difficulty level
+  5. ALL ANSWERS MUST BE MATHEMATICALLY CORRECT - verify your calculations!
+  6. Your explanations should follow the same pattern as the examples
+  {{else if examples}}
   
   CRITICAL - YOU MUST FOLLOW THESE EXACT EXAMPLES:
   {{#each examples}}
