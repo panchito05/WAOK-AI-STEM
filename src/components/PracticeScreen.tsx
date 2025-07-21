@@ -338,6 +338,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
             hint={hint}
             feedback={feedback}
             isLastExercise={currentIndex === exercises.length - 1}
+            autoCompensation={card.autoCompensation}
           />
         </div>
       </div>

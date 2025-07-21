@@ -6,6 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   Send, 
   Eye, 
@@ -26,6 +36,7 @@ interface AnswerPanelProps {
   solution?: string;
   hint?: string;
   isLastExercise: boolean;
+  autoCompensation?: boolean;
   feedback?: {
     isCorrect: boolean;
     message: string;
@@ -42,10 +53,12 @@ export default function AnswerPanel({
   solution,
   hint,
   isLastExercise,
+  autoCompensation,
   feedback,
 }: AnswerPanelProps) {
   const [answer, setAnswer] = useState('');
   const [showNumpad, setShowNumpad] = useState(true);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -122,14 +135,14 @@ export default function AnswerPanel({
                 Verificar Respuesta
               </Button>
               
-              {remainingAttempts === 0 && !showSolution && (
+              {!showSolution && (
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onRevealSolution}
+                  onClick={() => setShowConfirmDialog(true)}
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  Ver Solución
+                  Revelar Respuesta
                 </Button>
               )}
             </div>
@@ -207,6 +220,30 @@ export default function AnswerPanel({
           </CardContent>
         </Card>
       )}
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Revelar respuesta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Seguro que quieres revelar la respuesta? Esto contará como un intento fallido.
+              {autoCompensation && ' Se agregará un ejercicio adicional para compensar.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, seguir intentando</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowConfirmDialog(false);
+                onRevealSolution();
+              }}
+            >
+              Sí, revelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
