@@ -389,6 +389,11 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
                     onClear={handleClearCanvas}
                     height={500}
                     operationText={parsed.operation || currentExercise?.problem}
+                    onSubmitAnswer={handleAnswer}
+                    attempts={attempts}
+                    maxAttempts={card.attemptsPerExercise}
+                    showSolution={showSolution}
+                    feedback={feedback}
                   />
                 </>
               );

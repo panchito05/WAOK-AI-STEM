@@ -3,18 +3,31 @@
 import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import CompactAnswerPanel from './CompactAnswerPanel';
+import { cn } from '@/lib/utils';
 import { 
   Eraser, 
   Pencil, 
   RotateCcw,
   Download,
-  Palette
+  Palette,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 interface DrawingCanvasSimpleProps {
   onClear?: () => void;
   height?: number;
   operationText?: string;
+  // Props for answer panel when in fullscreen
+  onSubmitAnswer?: (answer: string) => void;
+  attempts?: number;
+  maxAttempts?: number;
+  showSolution?: boolean;
+  feedback?: {
+    isCorrect: boolean;
+    message: string;
+  };
 }
 
 const COLORS = [
@@ -26,12 +39,22 @@ const COLORS = [
   '#8B5CF6', // Purple
 ];
 
-export default function DrawingCanvasSimple({ onClear, height = 400, operationText }: DrawingCanvasSimpleProps) {
+export default function DrawingCanvasSimple({ 
+  onClear, 
+  height = 400, 
+  operationText,
+  onSubmitAnswer,
+  attempts = 0,
+  maxAttempts = 3,
+  showSolution = false,
+  feedback
+}: DrawingCanvasSimpleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentColor, setCurrentColor] = useState(COLORS[0]);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
   const [canvasSize, setCanvasSize] = useState({ width: 0, height });
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Estados para drag & drop del texto
   const [textPosition, setTextPosition] = useState({ x: 0, y: 50 });
@@ -44,8 +67,19 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
     const updateSize = () => {
       const container = document.getElementById('canvas-container-simple');
       if (container && canvasRef.current) {
-        const width = container.offsetWidth;
-        setCanvasSize({ width, height });
+        let width, effectiveHeight;
+        
+        if (isFullscreen) {
+          // In fullscreen mode, use viewport dimensions
+          width = window.innerWidth;
+          effectiveHeight = window.innerHeight;
+        } else {
+          // Normal mode
+          width = container.offsetWidth;
+          effectiveHeight = height;
+        }
+        
+        setCanvasSize({ width, height: effectiveHeight });
         
         // Preserve existing drawing when resizing
         const ctx = canvasRef.current.getContext('2d');
@@ -57,7 +91,7 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
         }
         
         canvasRef.current.width = width;
-        canvasRef.current.height = height;
+        canvasRef.current.height = effectiveHeight;
         
         if (imageData && ctx) {
           ctx.putImageData(imageData, 0, 0);
@@ -77,7 +111,7 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
     updateSize();
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
-  }, [height, operationText]);
+  }, [height, operationText, isFullscreen]);
 
   // Function to draw operation text on canvas
   const drawOperationText = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
@@ -337,9 +371,12 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
   };
 
   return (
-    <div className="space-y-4">
+    <div className={cn(
+      "transition-all duration-300 ease-in-out",
+      isFullscreen ? "fixed inset-0 z-50 bg-white flex flex-col" : "space-y-4"
+    )}>
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className={`flex items-center justify-between gap-2 flex-wrap ${isFullscreen ? 'p-4 bg-white shadow-md' : ''}`}>
         <div className="flex items-center gap-2">
           <Button
             variant={tool === 'pen' ? 'default' : 'outline'}
@@ -371,6 +408,18 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
           >
             <Download className="h-4 w-4" />
           </Button>
+          <div className="h-6 w-px bg-border mx-1" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+          </Button>
         </div>
 
         {/* Color picker */}
@@ -396,11 +445,11 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
       {/* Canvas */}
       <Card 
         id="canvas-container-simple"
-        className="overflow-hidden bg-white relative"
+        className={`overflow-hidden bg-white relative ${isFullscreen ? 'flex-1 m-4 mt-0' : ''}`}
         style={{ 
           backgroundImage: 'radial-gradient(circle, #e5e5e5 1px, transparent 1px)',
           backgroundSize: '20px 20px',
-          minHeight: `${height}px`,
+          minHeight: isFullscreen ? '0' : `${height}px`,
         }}
       >
         <canvas
@@ -422,9 +471,23 @@ export default function DrawingCanvasSimple({ onClear, height = 400, operationTe
         />
       </Card>
 
-      <p className="text-xs text-muted-foreground text-center">
-        Usa el lienzo para resolver el problema. Puedes dibujar, borrar y descargar tu trabajo.
-      </p>
+      {!isFullscreen && (
+        <p className="text-xs text-muted-foreground text-center">
+          Usa el lienzo para resolver el problema. Puedes dibujar, borrar y descargar tu trabajo.
+        </p>
+      )}
+      
+      {/* Overlay Answer Panel for Fullscreen Mode */}
+      {isFullscreen && onSubmitAnswer && (
+        <CompactAnswerPanel
+          onSubmit={onSubmitAnswer}
+          attempts={attempts}
+          maxAttempts={maxAttempts}
+          showSolution={showSolution}
+          feedback={feedback}
+          className="bottom-4 right-4"
+        />
+      )}
     </div>
   );
 }
