@@ -30,12 +30,23 @@ import {
   AlertCircle,
   Loader2,
   Plus,
-  Pencil
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { correctSpellingAction, generateExamplesForAllLevelsAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { exerciseCache } from '@/lib/exercise-cache';
 import LevelExamplesDialog from '@/components/LevelExamplesDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const formSchema = z.object({
   topic: z.string().min(2, 'El tema debe tener al menos 2 caracteres'),
@@ -56,9 +67,10 @@ interface CardEditorProps {
 }
 
 export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) {
-  const { createCard, updateCard } = useCards();
+  const { createCard, updateCard, deleteCard } = useCards();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [correctedTopic, setCorrectedTopic] = useState<string>('');
   const [topicColor, setTopicColor] = useState<string>('');
   const [topicIcon, setTopicIcon] = useState<string>('');
@@ -271,6 +283,30 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!card) return;
+    
+    setIsLoading(true);
+    try {
+      await deleteCard(card.id);
+      toast({
+        title: 'Tarjeta eliminada',
+        description: 'La tarjeta se ha eliminado correctamente.',
+      });
+      onSave(); // Call onSave to refresh the list
+    } catch (error) {
+      console.error('Error deleting card:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar la tarjeta',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -574,6 +610,17 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
             />
 
             <div className="flex gap-3 pt-4">
+              {card && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={isLoading}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar
+                </Button>
+              )}
               <Button type="submit" disabled={isLoading || generatingExamples} className="flex-1">
                 {isLoading ? (
                   <>
@@ -634,6 +681,27 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
           setEditingExample(null);
         }}
       />
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar tarjeta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. La tarjeta "{card?.topic}" y todos sus ejercicios serán eliminados permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

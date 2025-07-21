@@ -10,7 +10,6 @@ import {
   Star, 
   StarOff, 
   Edit, 
-  Trash2, 
   Play, 
   Plus,
   BookOpen,
@@ -34,16 +33,7 @@ interface CardsListProps {
 }
 
 export default function CardsList({ onSelectCard, onCreateCard, onEditCard }: CardsListProps) {
-  const { cards, isLoading, deleteCard, toggleFavorite } = useCards();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const handleDelete = async (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta tarjeta?')) {
-      setDeletingId(id);
-      await deleteCard(id);
-      setDeletingId(null);
-    }
-  };
+  const { cards, isLoading, toggleFavorite } = useCards();
 
   const getDifficultyColor = (difficulty: number) => {
     if (difficulty <= 3) return 'bg-green-500';
@@ -210,13 +200,6 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard }: Ca
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button 
-                  className="flex-1"
-                  onClick={() => onSelectCard(card)}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  {exerciseCache.getPoolStatus(card.id).ready ? 'Practicar' : 'Usar'}
-                </Button>
                 <Button
                   variant="outline"
                   size="icon"
@@ -224,13 +207,12 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard }: Ca
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleDelete(card.id)}
-                  disabled={deletingId === card.id}
+                <Button 
+                  className="flex-1"
+                  onClick={() => onSelectCard(card)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Play className="mr-2 h-4 w-4" />
+                  {exerciseCache.getPoolStatus(card.id).ready ? 'Practicar' : 'Usar'}
                 </Button>
               </div>
             </CardContent>
