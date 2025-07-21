@@ -5,14 +5,16 @@ import Header from '@/components/Header';
 import CardsList from '@/components/CardsList';
 import CardEditor from '@/components/CardEditor';
 import PracticeScreen from '@/components/PracticeScreen';
+import MultiPracticeScreen from '@/components/MultiPracticeScreen';
 import { PracticeCard } from '@/lib/storage';
 
-type ViewMode = 'list' | 'practice' | 'edit';
+type ViewMode = 'list' | 'practice' | 'edit' | 'multi-practice';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewMode>('list');
   const [selectedCard, setSelectedCard] = useState<PracticeCard | null>(null);
   const [editingCard, setEditingCard] = useState<PracticeCard | null>(null);
+  const [multiPracticeType, setMultiPracticeType] = useState<'favorites' | 'all'>('all');
 
   const handleSelectCard = (card: PracticeCard) => {
     setSelectedCard(card);
@@ -35,6 +37,11 @@ export default function Home() {
     setEditingCard(null);
   };
 
+  const handleMultiPractice = (type: 'favorites' | 'all') => {
+    setMultiPracticeType(type);
+    setCurrentView('multi-practice');
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header />
@@ -45,6 +52,7 @@ export default function Home() {
               onSelectCard={handleSelectCard}
               onCreateCard={handleCreateCard}
               onEditCard={handleEditCard}
+              onMultiPractice={handleMultiPractice}
             />
           )}
           
@@ -69,6 +77,13 @@ export default function Home() {
                 onCancel={handleBackToList}
               />
             </div>
+          )}
+          
+          {currentView === 'multi-practice' && (
+            <MultiPracticeScreen
+              type={multiPracticeType}
+              onBack={handleBackToList}
+            />
           )}
         </div>
       </main>

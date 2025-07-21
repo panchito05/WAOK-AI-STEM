@@ -30,6 +30,44 @@ export interface PracticeCard {
   };
 }
 
+// Interfaces para práctica múltiple
+export interface MultiPracticeExercise {
+  cardId: string;
+  cardName: string;
+  cardTopic: string;
+  cardColor?: string;
+  cardIcon?: string;
+  exercise: {
+    id: string;
+    problem: string;
+    solution: string;
+    explanation: string;
+  };
+  difficulty: number;
+  attemptsPerExercise: number;
+  autoCompensation: boolean;
+}
+
+export interface MultiPracticeSession {
+  id: string;
+  type: 'favorites' | 'all';
+  exercises: MultiPracticeExercise[];
+  currentIndex: number;
+  results: {
+    [cardId: string]: {
+      cardName: string;
+      correct: number;
+      incorrect: number;
+      timeSpent: number;
+      startedAt: string;
+    };
+  };
+  startedAt: string;
+  completedAt?: string;
+  totalCorrect: number;
+  totalIncorrect: number;
+}
+
 const STORAGE_KEY = 'mathminds_practice_cards';
 
 // Función para calcular la solución de un problema matemático simple
