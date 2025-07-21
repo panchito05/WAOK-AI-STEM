@@ -32,7 +32,7 @@ import {
   Plus,
   Pencil
 } from 'lucide-react';
-import { correctSpellingAction } from '@/app/actions';
+import { correctSpellingAction, generateExamplesForAllLevelsAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { exerciseCache } from '@/lib/exercise-cache';
 import LevelExamplesDialog from '@/components/LevelExamplesDialog';
@@ -72,6 +72,8 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
     card?.structuredExamples || {}
   );
   const [editingExample, setEditingExample] = useState<{ index: number; example: StructuredExample } | null>(null);
+  const [generatingExamples, setGeneratingExamples] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState('');
 
   // Initialize color and icon from existing card
   useEffect(() => {
@@ -128,6 +130,46 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
 
     return () => clearTimeout(timer);
   }, [topic]);
+
+  // Generate examples automatically when topic is set and no examples exist
+  useEffect(() => {
+    const shouldGenerateExamples = 
+      !card && // Only for new cards
+      topic && // Topic is set
+      topic.length > 2 && // Topic is valid
+      Object.keys(structuredExamples).length === 0 && // No examples exist
+      !generatingExamples; // Not already generating
+
+    if (shouldGenerateExamples) {
+      const timer = setTimeout(async () => {
+        setGeneratingExamples(true);
+        setGenerationProgress('Generando ejemplos para todos los niveles...');
+        
+        try {
+          const result = await generateExamplesForAllLevelsAction(topic);
+          if (result.data) {
+            setStructuredExamples(result.data);
+            toast({
+              title: 'Ejemplos generados',
+              description: 'Se generaron ejemplos para todos los niveles automáticamente',
+            });
+          }
+        } catch (error) {
+          console.error('Error generating examples:', error);
+          toast({
+            title: 'Error',
+            description: 'No se pudieron generar los ejemplos automáticamente',
+            variant: 'destructive',
+          });
+        } finally {
+          setGeneratingExamples(false);
+          setGenerationProgress('');
+        }
+      }, 2000); // Wait 2 seconds after user stops typing
+
+      return () => clearTimeout(timer);
+    }
+  }, [topic, card, structuredExamples, generatingExamples, toast]);
 
 
   const onSubmit = async (values: FormValues) => {
@@ -345,6 +387,12 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">Ejemplos del nivel {difficulty}:</span>
+                {generatingExamples && (
+                  <div className="flex items-center gap-2 ml-auto">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span className="text-xs text-muted-foreground">{generationProgress}</span>
+                  </div>
+                )}
               </div>
               {structuredExamples[difficulty]?.length > 0 ? (
                 <div className="space-y-3">
@@ -501,11 +549,16 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
             />
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={isLoading} className="flex-1">
+              <Button type="submit" disabled={isLoading || generatingExamples} className="flex-1">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Guardando...
+                  </>
+                ) : generatingExamples ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generando ejemplos...
                   </>
                 ) : (
                   <>
