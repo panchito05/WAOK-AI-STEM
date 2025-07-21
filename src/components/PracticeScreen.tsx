@@ -50,6 +50,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   const [hint, setHint] = useState<string>('');
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | undefined>();
   const [sessionComplete, setSessionComplete] = useState(false);
+  const [hasModalOpen, setHasModalOpen] = useState(false);
   
   // Adaptive difficulty states
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
@@ -188,10 +189,16 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
               currentDifficulty < 10) {
             setCurrentDifficulty(prev => prev + 1);
             setConsecutiveCorrect(0);
+            // Block auto-advance temporarily when showing level-up notification
+            setHasModalOpen(true);
             toast({
               title: "¡Nivel superado! 🎉",
               description: `Has subido al nivel ${currentDifficulty + 1}. ¡Sigue así!`,
             });
+            // Reset modal state after toast duration
+            setTimeout(() => {
+              setHasModalOpen(false);
+            }, 5000); // 5 seconds to ensure toast is fully shown
           }
         } else if (newAttempts >= card.attemptsPerExercise) {
           // No more attempts
@@ -248,6 +255,8 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
     } else {
       // Session complete
       setSessionComplete(true);
+      // Block auto-advance when showing session complete notification
+      setHasModalOpen(true);
       toast({
         title: '¡Sesión completada!',
         description: `Has completado ${exercises.length} ejercicios con ${correctAnswers} respuestas correctas.`,
@@ -401,6 +410,8 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
             feedback={feedback}
             isLastExercise={currentIndex === exercises.length - 1}
             autoCompensation={card.autoCompensation}
+            cardId={card.id}
+            hasModalOpen={hasModalOpen}
           />
         </div>
       </div>

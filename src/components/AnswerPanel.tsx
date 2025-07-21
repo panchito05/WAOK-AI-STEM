@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { userPreferences } from '@/lib/user-preferences';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +44,8 @@ interface AnswerPanelProps {
     isCorrect: boolean;
     message: string;
   };
+  cardId: string;
+  hasModalOpen?: boolean;
 }
 
 export default function AnswerPanel({
@@ -55,10 +60,53 @@ export default function AnswerPanel({
   isLastExercise,
   autoCompensation,
   feedback,
+  cardId,
+  hasModalOpen = false,
 }: AnswerPanelProps) {
   const [answer, setAnswer] = useState('');
   const [showNumpad, setShowNumpad] = useState(true);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  // Load auto-advance preference on mount
+  useEffect(() => {
+    const savedPreference = userPreferences.getAutoAdvance(cardId);
+    setAutoAdvance(savedPreference);
+  }, [cardId]);
+
+  // Handle auto-advance preference change
+  const handleAutoAdvanceChange = (checked: boolean) => {
+    setAutoAdvance(checked);
+    userPreferences.setAutoAdvance(cardId, checked);
+  };
+
+  // Auto-advance logic
+  useEffect(() => {
+    if (showSolution && feedback?.isCorrect && autoAdvance && !hasModalOpen && !isLastExercise) {
+      // Start countdown
+      let timeLeft = 3;
+      setCountdown(timeLeft);
+      
+      const interval = setInterval(() => {
+        timeLeft -= 1;
+        setCountdown(timeLeft);
+        
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          setCountdown(null);
+          onNext();
+        }
+      }, 1000);
+
+      return () => {
+        clearInterval(interval);
+        setCountdown(null);
+      };
+    } else {
+      setCountdown(null);
+    }
+  }, [showSolution, feedback?.isCorrect, autoAdvance, hasModalOpen, isLastExercise, onNext]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -187,10 +235,57 @@ export default function AnswerPanel({
                 </Card>
               )}
 
-              <Button onClick={onNext} className="w-full">
-                {isLastExercise ? 'Finalizar Sesión' : 'Siguiente Ejercicio'}
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
+              <div className="space-y-3">
+                <div className="flex w-full shadow-sm">
+                  {!isLastExercise && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="flex items-center gap-2 bg-white/95 px-4 py-2 h-10 border border-r-0 border-primary/20 rounded-l-md hover:bg-gray-50 transition-colors cursor-pointer group"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleAutoAdvanceChange(!autoAdvance);
+                            }}
+                          >
+                            <Checkbox
+                              id="auto-advance"
+                              checked={autoAdvance}
+                              onCheckedChange={handleAutoAdvanceChange}
+                              className="h-4 w-4 border-2 border-gray-300 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 data-[state=checked]:text-white pointer-events-none"
+                            />
+                            <label
+                              htmlFor="auto-advance"
+                              className="text-sm font-medium select-none text-gray-700 group-hover:text-gray-900 pointer-events-none"
+                            >
+                              Auto Continue
+                            </label>
+                            <div className="w-px h-6 bg-gray-300 ml-1" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Avanzar automáticamente después de 3 segundos en respuestas correctas</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  
+                  <Button 
+                    onClick={onNext}
+                    className={`flex-1 h-10 ${!isLastExercise ? 'rounded-l-none' : ''}`}
+                    disabled={countdown !== null}
+                  >
+                    {countdown !== null ? (
+                      <>Continuando en {countdown}...</>
+                    ) : (
+                      <>
+                        {isLastExercise ? 'Finalizar Sesión' : 'Siguiente Ejercicio'}
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
