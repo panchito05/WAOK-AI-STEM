@@ -1,17 +1,21 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { userPreferences } from '@/lib/user-preferences';
 import { 
   Send, 
   Calculator,
   CheckCircle,
   XCircle,
-  GripVertical
+  GripVertical,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +29,11 @@ interface CompactAnswerPanelProps {
     message: string;
   };
   className?: string;
+  solution?: string;
+  hint?: string;
+  onNext?: () => void;
+  isLastExercise?: boolean;
+  cardId?: string;
 }
 
 export default function CompactAnswerPanel({
@@ -33,7 +42,12 @@ export default function CompactAnswerPanel({
   maxAttempts,
   showSolution,
   feedback,
-  className
+  className,
+  solution,
+  hint,
+  onNext,
+  isLastExercise = false,
+  cardId
 }: CompactAnswerPanelProps) {
   const [answer, setAnswer] = useState('');
   const [showNumpad, setShowNumpad] = useState(false);
@@ -41,6 +55,8 @@ export default function CompactAnswerPanel({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [autoAdvance, setAutoAdvance] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   
   // Initialize position based on viewport size
@@ -89,6 +105,77 @@ export default function CompactAnswerPanel({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Adjust position when numpad is shown/hidden to keep panel in viewport
+  useEffect(() => {
+    if (!panelRef.current || isDragging) return;
+    
+    const adjustPositionForNumpad = () => {
+      const rect = panelRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      // Estimate additional height for numpad and solution content
+      const estimatedNumpadHeight = showNumpad ? 250 : 0;
+      const estimatedSolutionHeight = showSolution && solution ? 200 : 0; // Approximation for solution UI
+      const totalHeight = rect.height + estimatedNumpadHeight + estimatedSolutionHeight;
+      const bottomEdge = position.y + totalHeight;
+      
+      // Check if panel would go off-screen at the bottom
+      if (bottomEdge > window.innerHeight - 20) {
+        // Calculate minimum Y position to stay below toolbar (approximately 80px for controls + padding)
+        const minY = 100;
+        const newY = Math.max(minY, window.innerHeight - totalHeight - 20);
+        setPosition(prev => ({ ...prev, y: newY }));
+      }
+    };
+    
+    // Small delay to allow DOM to update
+    const timer = setTimeout(adjustPositionForNumpad, 50);
+    return () => clearTimeout(timer);
+  }, [showNumpad, isDragging, position.y, showSolution, solution]);
+
+  // Load auto-advance preference on mount
+  useEffect(() => {
+    if (cardId) {
+      const savedPreference = userPreferences.getAutoAdvance(cardId);
+      setAutoAdvance(savedPreference);
+    }
+  }, [cardId]);
+
+  // Auto-advance logic
+  useEffect(() => {
+    if (showSolution && feedback?.isCorrect && autoAdvance && !isLastExercise && onNext) {
+      // Start countdown
+      let timeLeft = 3;
+      setCountdown(timeLeft);
+      
+      const interval = setInterval(() => {
+        timeLeft -= 1;
+        setCountdown(timeLeft);
+        
+        if (timeLeft <= 0) {
+          clearInterval(interval);
+          setCountdown(null);
+          onNext();
+        }
+      }, 1000);
+
+      return () => {
+        clearInterval(interval);
+        setCountdown(null);
+      };
+    } else {
+      setCountdown(null);
+    }
+  }, [showSolution, feedback?.isCorrect, autoAdvance, isLastExercise, onNext]);
+
+  // Handle auto-advance preference change
+  const handleAutoAdvanceChange = (checked: boolean) => {
+    setAutoAdvance(checked);
+    if (cardId) {
+      userPreferences.setAutoAdvance(cardId, checked);
+    }
+  };
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -172,7 +259,7 @@ export default function CompactAnswerPanel({
     <div
       ref={panelRef}
       className={cn(
-        "fixed z-50 transition-all duration-200",
+        "fixed z-50 transition-all duration-300",
         isDragging ? "cursor-grabbing" : "",
         isHovered || isDragging ? "opacity-100" : "opacity-80",
         isMounted ? "translate-y-0 opacity-80" : "translate-y-4 opacity-0",
@@ -247,6 +334,79 @@ export default function CompactAnswerPanel({
               )}
               <AlertDescription className="text-xs ml-1">{feedback.message}</AlertDescription>
             </Alert>
+          )}
+
+          {/* Solution and explanation when shown */}
+          {showSolution && solution && (
+            <div className="space-y-2">
+              <Alert className="border-green-500 bg-green-50 py-2">
+                <CheckCircle className="h-3 w-3 text-green-600" />
+                <AlertDescription className="text-xs text-green-900 ml-1">
+                  <span className="font-semibold">Respuesta:</span> {solution}
+                </AlertDescription>
+              </Alert>
+              
+              {hint && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-3">
+                    <h4 className="font-semibold text-xs text-blue-900 mb-1">Explicación:</h4>
+                    <p className="text-xs text-blue-800">{hint}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {onNext && (
+                <div className="flex flex-col gap-2">
+                  {!isLastExercise && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="flex items-center gap-2 bg-white/95 px-3 py-1.5 h-8 border border-primary/20 rounded-md hover:bg-gray-50 transition-colors cursor-pointer group"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleAutoAdvanceChange(!autoAdvance);
+                            }}
+                          >
+                            <Checkbox
+                              id="auto-advance-compact"
+                              checked={autoAdvance}
+                              onCheckedChange={handleAutoAdvanceChange}
+                              className="h-3 w-3 border-2 border-gray-300 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 data-[state=checked]:text-white pointer-events-none"
+                            />
+                            <label
+                              htmlFor="auto-advance-compact"
+                              className="text-xs font-medium select-none text-gray-700 group-hover:text-gray-900 pointer-events-none"
+                            >
+                              Auto continue
+                            </label>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Avanzar automáticamente después de 3 segundos</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  
+                  <Button 
+                    onClick={onNext}
+                    className="w-full h-8 text-xs"
+                    size="sm"
+                    disabled={countdown !== null}
+                  >
+                    {countdown !== null ? (
+                      <>Continuando en {countdown}...</>
+                    ) : (
+                      <>
+                        {isLastExercise ? 'Finalizar' : 'Siguiente Ejercicio'}
+                        <ChevronRight className="ml-1 h-3 w-3" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Numpad */}

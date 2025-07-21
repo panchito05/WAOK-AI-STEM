@@ -394,6 +394,11 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
                     maxAttempts={card.attemptsPerExercise}
                     showSolution={showSolution}
                     feedback={feedback}
+                    solution={currentExercise?.solution}
+                    hint={hint}
+                    onNext={handleNextExercise}
+                    isLastExercise={currentIndex === exercises.length - 1}
+                    cardId={card.id}
                   />
                 </>
               );

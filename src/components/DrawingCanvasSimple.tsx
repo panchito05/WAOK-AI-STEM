@@ -35,6 +35,11 @@ interface DrawingCanvasSimpleProps {
     isCorrect: boolean;
     message: string;
   };
+  solution?: string;
+  hint?: string;
+  onNext?: () => void;
+  isLastExercise?: boolean;
+  cardId?: string;
 }
 
 const COLORS = [
@@ -49,7 +54,12 @@ export default function DrawingCanvasSimple({
   attempts = 0,
   maxAttempts = 3,
   showSolution = false,
-  feedback
+  feedback,
+  solution,
+  hint,
+  onNext,
+  isLastExercise = false,
+  cardId
 }: DrawingCanvasSimpleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [lines, setLines] = useState<Line[]>([]);
@@ -318,6 +328,11 @@ export default function DrawingCanvasSimple({
           showSolution={showSolution}
           feedback={feedback}
           className="bottom-4 right-4"
+          solution={solution}
+          hint={hint}
+          onNext={onNext}
+          isLastExercise={isLastExercise}
+          cardId={cardId}
         />
       )}
     </div>
