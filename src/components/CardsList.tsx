@@ -99,37 +99,39 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
       </div>
 
       {/* Sección de Práctica Múltiple */}
-      <div className="mb-8">
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 overflow-hidden">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Shuffle className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-xl">Práctica Múltiple</CardTitle>
+      <div className="mb-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 overflow-hidden">
+          <CardHeader className="py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <Shuffle className="h-4 w-4 text-blue-600" />
+                <CardTitle className="text-base">Práctica Múltiple</CardTitle>
+              </div>
+              <CardDescription className="text-xs text-right">
+                Practica varias operaciones en una sesión continua
+              </CardDescription>
             </div>
-            <CardDescription>
-              Practica varias operaciones en una sola sesión continua para mantener tu mente activa
-            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-4">
+          <CardContent className="py-3">
+            <div className="grid md:grid-cols-2 gap-2">
               {/* Botón Solo Favoritas */}
               <div className="relative">
                 <Button
                   variant="default"
-                  size="lg"
-                  className={`w-full h-auto py-6 px-6 bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white shadow-lg ${
+                  size="sm"
+                  className={`w-full h-auto py-2 px-3 bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white shadow-sm ${
                     cards.filter(c => c.isFavorite).length === 0 ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   disabled={cards.filter(c => c.isFavorite).length === 0}
                   onClick={() => onMultiPractice('favorites')}
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <Star className="h-8 w-8" />
-                    <span className="text-lg font-semibold">Solo Operaciones Favoritas</span>
-                    <span className="text-sm opacity-90">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Star className="h-4 w-4" />
+                    <span className="text-sm font-medium">Solo Favoritas</span>
+                    <span className="text-xs opacity-90">
                       {cards.filter(c => c.isFavorite).length === 0 
-                        ? 'No tienes favoritas aún' 
-                        : `${cards.filter(c => c.isFavorite).length} operaciones disponibles`}
+                        ? 'No tienes favoritas' 
+                        : `${cards.filter(c => c.isFavorite).length} disponibles`}
                     </span>
                   </div>
                 </Button>
@@ -139,15 +141,15 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
               <div className="relative">
                 <Button
                   variant="default"
-                  size="lg"
-                  className="w-full h-auto py-6 px-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
+                  size="sm"
+                  className="w-full h-auto py-2 px-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-sm"
                   onClick={() => onMultiPractice('all')}
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <Eye className="h-8 w-8" />
-                    <span className="text-lg font-semibold">Todas las Operaciones Visibles</span>
-                    <span className="text-sm opacity-90">
-                      {cards.length} operaciones disponibles
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Eye className="h-4 w-4" />
+                    <span className="text-sm font-medium">Todas las Operaciones</span>
+                    <span className="text-xs opacity-90">
+                      {cards.length} disponibles
                     </span>
                   </div>
                 </Button>
