@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { PracticeCard, cardStorage, DEFAULT_CARDS } from '@/lib/storage';
+import { PracticeCard, cardStorage } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { exerciseCache } from '@/lib/exercise-cache';
 import { useProfile } from '@/contexts/ProfileContext';
@@ -33,26 +33,9 @@ export function useCards() {
     setIsLoading(true);
     try {
       const storedCards = cardStorage.getAll();
+      setCards(storedCards);
       
-      // If no cards exist, create default ones
-      if (storedCards.length === 0) {
-        const newCards: PracticeCard[] = [];
-        DEFAULT_CARDS.forEach(card => {
-          const newCard = cardStorage.create(card);
-          if (newCard) {
-            newCards.push(newCard);
-            // Preload exercises for default cards
-            exerciseCache.preloadExercises({
-              id: newCard.id,
-              topic: newCard.topic,
-              difficulty: newCard.difficulty,
-              customInstructions: newCard.customInstructions
-            });
-          }
-        });
-        setCards(cardStorage.getAll());
-      } else {
-        setCards(storedCards);
+      if (storedCards.length > 0) {
         
         // Preload exercises with intelligent prioritization
         console.log('Starting intelligent exercise preloading...');

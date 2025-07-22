@@ -322,36 +322,3 @@ export const cardStorage = {
   }
 };
 
-// Default card templates
-export const DEFAULT_CARDS: Omit<PracticeCard, 'id' | 'createdAt' | 'updatedAt'>[] = [
-  {
-    name: 'Suma Básica',
-    topic: 'addition',
-    difficulty: 2,
-    customInstructions: '',
-    exerciseCount: 10,
-    attemptsPerExercise: 3,
-    autoCompensation: false,
-    isFavorite: false,
-  },
-  {
-    name: 'Multiplicación Intermedia',
-    topic: 'multiplication',
-    difficulty: 5,
-    customInstructions: 'Incluir tablas del 6 al 9',
-    exerciseCount: 15,
-    attemptsPerExercise: 2,
-    autoCompensation: true,
-    isFavorite: false,
-  },
-  {
-    name: 'Fracciones',
-    topic: 'fracciones',
-    difficulty: 7,
-    customInstructions: 'Solo fracciones propias',
-    exerciseCount: 10,
-    attemptsPerExercise: 3,
-    autoCompensation: true,
-    isFavorite: true,
-  },
-];
