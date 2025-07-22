@@ -85,23 +85,37 @@ export const exerciseCache = {
     
     for (const exercise of exercises) {
       // Basic validation - ensure required fields exist
+      if (!exercise || typeof exercise !== 'object') {
+        console.error(`[Cache] Invalid exercise object:`, exercise);
+        continue;
+      }
+      
       if (!exercise.problem || !exercise.solution || !exercise.explanation) {
-        console.error(`[Cache] Exercise missing required fields:`, exercise);
+        console.error(`[Cache] Exercise missing required fields:`, {
+          hasId: !!exercise.id,
+          hasProblem: !!exercise.problem,
+          hasSolution: !!exercise.solution,
+          hasExplanation: !!exercise.explanation,
+          exercise: exercise
+        });
         continue;
       }
       
       // Check if operation type matches the card topic
-      if (card) {
+      if (card && card.topic) {
         const operationValidation = validateOperationType(exercise.problem, card.topic);
         if (!operationValidation.valid) {
           console.error(`[Cache] Exercise has wrong operation type:`, {
-            problem: exercise.problem,
-            topic: card.topic,
-            expected: operationValidation.expectedOperation,
-            actual: operationValidation.actualOperation
+            problem: exercise.problem || 'undefined',
+            topic: card.topic || 'undefined',
+            expected: operationValidation.expectedOperation || 'none',
+            actual: operationValidation.actualOperation || 'none',
+            cardId: cardId
           });
           continue; // Skip this exercise completely
         }
+      } else if (!card) {
+        console.warn(`[Cache] Card not found for cardId: ${cardId}`);
       }
       
       const validation = isValidExercise(exercise);
