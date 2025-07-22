@@ -261,6 +261,66 @@ export async function correctSpellingAction(text: string) {
   }
 }
 
+// Spell correction action using AI for intelligent understanding
+export async function correctSpellingWithAIAction(text: string) {
+  try {
+    // First try AI correction for complex phrases
+    const { correctMathTopic } = await import('@/ai/flows/correct-math-topic');
+    const aiResult = await correctMathTopic({ text });
+    
+    // If AI has high confidence, use its correction
+    if (aiResult.confidence > 0.7) {
+      // Get color and icon configuration for the corrected topic
+      const { findTopicConfig } = await import('@/lib/topic-mapping');
+      const config = findTopicConfig(aiResult.correctedTopic);
+      
+      return {
+        data: {
+          correctedText: aiResult.correctedTopic,
+          color: config.color,
+          icon: config.icon,
+          confidence: aiResult.confidence
+        }
+      };
+    }
+    
+    // Fallback to static correction if AI confidence is low
+    const { getNormalizedTopicName, findTopicConfig } = await import('@/lib/topic-mapping');
+    const correctedText = getNormalizedTopicName(text);
+    const config = findTopicConfig(correctedText);
+    
+    return {
+      data: {
+        correctedText,
+        color: config.color,
+        icon: config.icon,
+        confidence: 0.5 // Medium confidence for static correction
+      }
+    };
+  } catch (error) {
+    console.error('Error in AI spelling correction:', error);
+    
+    // Ultimate fallback to static correction
+    try {
+      const { getNormalizedTopicName, findTopicConfig } = await import('@/lib/topic-mapping');
+      const correctedText = getNormalizedTopicName(text);
+      const config = findTopicConfig(correctedText);
+      
+      return {
+        data: {
+          correctedText,
+          color: config.color,
+          icon: config.icon,
+          confidence: 0.3 // Low confidence for fallback
+        }
+      };
+    } catch (fallbackError) {
+      console.error('Fallback correction also failed:', fallbackError);
+      return { error: 'Failed to correct spelling' };
+    }
+  }
+}
+
 // Generate examples for all levels (1-10) for a given topic
 export async function generateExamplesForAllLevelsAction(topic: string) {
   try {

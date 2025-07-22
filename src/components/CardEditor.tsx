@@ -33,7 +33,7 @@ import {
   Pencil,
   Trash2
 } from 'lucide-react';
-import { correctSpellingAction, generateExamplesForAllLevelsAction } from '@/app/actions';
+import { correctSpellingWithAIAction, generateExamplesForAllLevelsAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { exerciseCache } from '@/lib/exercise-cache';
 import LevelExamplesDialog from '@/components/LevelExamplesDialog';
@@ -87,6 +87,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const [editingExample, setEditingExample] = useState<{ index: number; example: StructuredExample } | null>(null);
   const [generatingExamples, setGeneratingExamples] = useState(false);
   const [generationProgress, setGenerationProgress] = useState('');
+  const [lastGeneratedTopic, setLastGeneratedTopic] = useState<string>('');
 
   // Initialize color and icon from existing card
   useEffect(() => {
@@ -118,7 +119,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       if (topic && topic.length > 2) {
         setCheckingSpelling(true);
         try {
-          const result = await correctSpellingAction(topic);
+          const result = await correctSpellingWithAIAction(topic);
           if (result.data) {
             const { correctedText, color, icon } = result.data;
             if (correctedText !== topic) {
@@ -145,13 +146,15 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
     return () => clearTimeout(timer);
   }, [topic]);
 
-  // Generate examples automatically when topic is set and no examples exist
+  // Generate examples automatically when topic changes
   useEffect(() => {
+    // Use corrected topic if available, otherwise use raw topic
+    const currentTopic = correctedTopic || topic;
+    
     const shouldGenerateExamples = 
-      !card && // Only for new cards
-      topic && // Topic is set
-      topic.length > 2 && // Topic is valid
-      Object.keys(structuredExamples).length === 0 && // No examples exist
+      currentTopic && // Topic is set
+      currentTopic.length > 2 && // Topic is valid
+      currentTopic !== lastGeneratedTopic && // Topic has changed
       !generatingExamples; // Not already generating
 
     if (shouldGenerateExamples) {
@@ -160,12 +163,13 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
         setGenerationProgress('Generando ejemplos para todos los niveles...');
         
         try {
-          const result = await generateExamplesForAllLevelsAction(topic);
+          const result = await generateExamplesForAllLevelsAction(currentTopic);
           if (result.data) {
             setStructuredExamples(result.data);
+            setLastGeneratedTopic(currentTopic); // Track the topic we generated for
             toast({
-              title: 'Ejemplos generados',
-              description: 'Se generaron ejemplos para todos los niveles automáticamente',
+              title: 'Ejemplos actualizados',
+              description: `Se generaron ejemplos para "${currentTopic}"`,
             });
           }
         } catch (error) {
@@ -183,7 +187,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
 
       return () => clearTimeout(timer);
     }
-  }, [topic, card, structuredExamples, generatingExamples, toast]);
+  }, [topic, correctedTopic, lastGeneratedTopic, generatingExamples, toast]);
 
 
   const onSubmit = async (values: FormValues) => {
@@ -198,7 +202,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       
       if (!finalColor || !finalIcon) {
         // Get color and icon for the current topic
-        const result = await correctSpellingAction(values.topic);
+        const result = await correctSpellingWithAIAction(values.topic);
         if (result.data) {
           finalColor = result.data.color || '';
           finalIcon = result.data.icon || '';
@@ -312,11 +316,14 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
 
   const applyCorrectedTopic = () => {
     form.setValue('topic', correctedTopic);
-    setCorrectedTopic('');
     setTopicColor(suggestedColor);
     setTopicIcon(suggestedIcon);
     setSuggestedColor('');
     setSuggestedIcon('');
+    // Clear corrected topic after a small delay to allow the examples useEffect to trigger
+    setTimeout(() => {
+      setCorrectedTopic('');
+    }, 100);
   };
 
   const getDifficultyLabel = (value: number) => {
