@@ -25,6 +25,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { exerciseCache } from '@/lib/exercise-cache';
 import { parseExerciseProblem } from '@/lib/exercise-parser';
+import { usePracticeHistory } from '@/hooks/use-practice-history';
+import { ExerciseDetail } from '@/lib/practice-history';
 
 interface Exercise {
   id: string;
@@ -40,6 +42,7 @@ interface PracticeScreenProps {
 
 export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   const { toast } = useToast();
+  const { startSession, updateSession, completeSession } = usePracticeHistory();
   
   // State management
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -66,6 +69,13 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0); // índice del problema activo (no en revisión)
   
+  // Practice history tracking
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [exerciseStartTime, setExerciseStartTime] = useState<number>(Date.now());
+  const [exerciseHistory, setExerciseHistory] = useState<ExerciseDetail[]>([]);
+  const [sessionStartTime] = useState<number>(Date.now());
+  const [hintsUsedCount, setHintsUsedCount] = useState(0);
+  
   // Ref for canvas to clear it when needed
   const canvasRef = useRef<{ clearCanvas: () => void }>(null);
 
@@ -90,6 +100,10 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
             const exerciseIds = exercises.map(ex => ex.id);
             exerciseCache.markAsUsed(card.id, exerciseIds);
             setIsLoading(false);
+            
+            // Start practice session for history tracking
+            const newSessionId = startSession(card);
+            setSessionId(newSessionId);
           }
           return;
         }
@@ -108,6 +122,10 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
           const exerciseIds = exercises.map(ex => ex.id);
           exerciseCache.markAsUsed(card.id, exerciseIds);
           setIsLoading(false);
+          
+          // Start practice session for history tracking
+          const newSessionId = startSession(card);
+          setSessionId(newSessionId);
         }
       } catch (error) {
         console.error('[PracticeScreen] Error loading exercises:', error);
@@ -200,6 +218,28 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
           }
         }));
         
+        // Track exercise completion for history
+        if (result.data.isCorrect || newAttempts >= card.attemptsPerExercise) {
+          const timeSpent = Math.round((Date.now() - exerciseStartTime) / 1000); // in seconds
+          const exerciseDetail: ExerciseDetail = {
+            problem: currentExercise.problem,
+            userAnswer: answer,
+            correctAnswer: currentExercise.solution,
+            isCorrect: result.data.isCorrect,
+            attempts: newAttempts,
+            timeSpent,
+            timestamp: new Date().toISOString(),
+          };
+          
+          const updatedHistory = [...exerciseHistory, exerciseDetail];
+          setExerciseHistory(updatedHistory);
+          
+          // Update session with current progress
+          if (sessionId) {
+            updateSession(sessionId, updatedHistory);
+          }
+        }
+        
         if (result.data.isCorrect) {
           // Clear the canvas when answer is correct
           canvasRef.current?.clearCanvas();
@@ -248,6 +288,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
           );
           if (hintResult.data) {
             setHint(hintResult.data);
+            setHintsUsedCount(prev => prev + 1);
           }
         }
       }
@@ -274,6 +315,28 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
         attempts: attempts + 1
       }
     }));
+    
+    // Track exercise as failed when solution is revealed
+    if (currentExercise) {
+      const timeSpent = Math.round((Date.now() - exerciseStartTime) / 1000);
+      const exerciseDetail: ExerciseDetail = {
+        problem: currentExercise.problem,
+        userAnswer: '',
+        correctAnswer: currentExercise.solution,
+        isCorrect: false,
+        attempts: attempts + 1,
+        timeSpent,
+        timestamp: new Date().toISOString(),
+      };
+      
+      const updatedHistory = [...exerciseHistory, exerciseDetail];
+      setExerciseHistory(updatedHistory);
+      
+      // Update session with current progress
+      if (sessionId) {
+        updateSession(sessionId, updatedHistory);
+      }
+    }
     
     // Add compensation exercise if enabled
     if (card.autoCompensation) {
@@ -314,9 +377,26 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
       setShowSolution(false);
       setHint('');
       setFeedback(undefined);
+      // Reset exercise start time for next exercise
+      setExerciseStartTime(Date.now());
     } else {
       // Session complete
       setSessionComplete(true);
+      
+      // Complete the practice session in history
+      if (sessionId) {
+        const totalTime = Math.round((Date.now() - sessionStartTime) / 1000);
+        completeSession(sessionId, {
+          totalExercises: exercises.length,
+          correctAnswers,
+          totalTimeSpent: totalTime,
+          avgTimePerProblem: totalTime / exercises.length,
+          finalDifficulty: currentDifficulty,
+          hintsUsed: hintsUsedCount,
+          consecutiveCorrect,
+        });
+      }
+      
       // Block auto-advance when showing session complete notification
       setHasModalOpen(true);
       toast({
