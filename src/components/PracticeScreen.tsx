@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PracticeCard } from '@/lib/storage';
 import DrawingCanvasSimple from './DrawingCanvasSimple';
 import AnswerPanel from './AnswerPanel';
@@ -65,6 +65,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   }>>({});
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0); // índice del problema activo (no en revisión)
+  
+  // Ref for canvas to clear it when needed
+  const canvasRef = useRef<{ clearCanvas: () => void }>(null);
 
   // Load exercises once on mount
   useEffect(() => {
@@ -198,6 +201,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
         }));
         
         if (result.data.isCorrect) {
+          // Clear the canvas when answer is correct
+          canvasRef.current?.clearCanvas();
+          
           setCorrectAnswers(prev => prev + 1);
           setConsecutiveCorrect(prev => prev + 1);
           setShowSolution(true);
@@ -299,6 +305,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   };
 
   const handleNextExercise = () => {
+    // Clear the canvas when moving to next exercise
+    canvasRef.current?.clearCanvas();
+    
     if (currentIndex < exercises.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setAttempts(0);
@@ -460,6 +469,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
                   
                   {/* Canvas with only the operation */}
                   <DrawingCanvasSimple
+                    ref={canvasRef}
                     onClear={handleClearCanvas}
                     height={500}
                     operationText={parsed.operation || currentExercise?.problem}

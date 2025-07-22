@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import CompactAnswerPanel from './CompactAnswerPanel';
@@ -59,7 +59,10 @@ const COLORS = [
   '#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6',
 ];
 
-export default function DrawingCanvasSimple({ 
+const DrawingCanvasSimple = forwardRef<
+  { clearCanvas: () => void },
+  DrawingCanvasSimpleProps
+>(({ 
   onClear, 
   height = 400, 
   operationText,
@@ -82,7 +85,7 @@ export default function DrawingCanvasSimple({
   isReviewMode = false,
   userAnswer,
   onBackToActive
-}: DrawingCanvasSimpleProps) {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -95,6 +98,9 @@ export default function DrawingCanvasSimple({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [textBounds, setTextBounds] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [cursorStyle, setCursorStyle] = useState<string>('crosshair');
+
+  // Expose clearCanvas method to parent components (will be set after handleClear is defined)
+  const clearCanvasRef = useRef<() => void>(() => {});
 
   // Centralized redraw function
   const redrawCanvas = useCallback(() => {
@@ -290,6 +296,14 @@ export default function DrawingCanvasSimple({
     onClear?.();
   };
 
+  // Update the ref with the handleClear function
+  clearCanvasRef.current = handleClear;
+
+  // Expose clearCanvas method to parent components
+  useImperativeHandle(ref, () => ({
+    clearCanvas: handleClear
+  }), []);
+
   const handleDownload = () => {
     const canvas = canvasRef.current;
     if (canvas) {
@@ -400,4 +414,8 @@ export default function DrawingCanvasSimple({
       )}
     </div>
   );
-}
+});
+
+DrawingCanvasSimple.displayName = 'DrawingCanvasSimple';
+
+export default DrawingCanvasSimple;

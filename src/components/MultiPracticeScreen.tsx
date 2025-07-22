@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCards } from '@/hooks/use-cards';
 import { multiPracticeStorage } from '@/lib/multi-practice-storage';
 import { MultiPracticeSession, MultiPracticeExercise } from '@/lib/storage';
@@ -52,6 +52,9 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | undefined>();
   const [sessionComplete, setSessionComplete] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  
+  // Ref for canvas to clear it when needed
+  const canvasRef = useRef<{ clearCanvas: () => void }>(null);
 
   // Load or create session
   useEffect(() => {
@@ -209,6 +212,9 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
         setFeedback(result.data);
         
         if (result.data.isCorrect) {
+          // Clear the canvas when answer is correct
+          canvasRef.current?.clearCanvas();
+          
           multiPracticeStorage.updateProgress(
             session.id,
             currentIndex,
@@ -266,6 +272,9 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
 
   const handleNextExercise = () => {
     if (!session) return;
+    
+    // Clear the canvas when moving to next exercise
+    canvasRef.current?.clearCanvas();
     
     if (currentIndex < session.exercises.length - 1) {
       const newIndex = currentIndex + 1;
@@ -523,6 +532,7 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
                   
                   {/* Canvas with only the operation */}
                   <DrawingCanvasSimple
+                    ref={canvasRef}
                     onClear={handleClearCanvas}
                     height={500}
                     operationText={parsed.operation || currentExercise.exercise.problem}
