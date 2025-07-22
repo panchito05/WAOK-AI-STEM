@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useCards } from '@/hooks/use-cards';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { 
   Star, 
   StarOff, 
@@ -21,12 +22,17 @@ import {
   Sparkles,
   TrendingUp,
   Eye,
-  Shuffle
+  Shuffle,
+  Search,
+  X
 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { PracticeCard } from '@/lib/storage';
 import { exerciseCache } from '@/lib/exercise-cache';
 import DynamicIcon from './DynamicIcon';
+import { findTopicConfig, getNormalizedTopicName } from '@/lib/topic-mapping';
+import { fuzzySearch, isSpecialSearchTerm, applySpecialSearch } from '@/lib/search-utils';
+import { useProfile } from '@/contexts/ProfileContext';
 
 interface CardsListProps {
   onSelectCard: (card: PracticeCard) => void;
@@ -35,8 +41,119 @@ interface CardsListProps {
   onMultiPractice: (type: 'favorites' | 'all') => void;
 }
 
+const SEARCH_STORAGE_KEY = 'mathminds_search_filters';
+
 export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMultiPractice }: CardsListProps) {
   const { cards, isLoading, toggleFavorite } = useCards();
+  const { currentProfile } = useProfile();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Cargar filtros guardados al montar el componente
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedFilters = sessionStorage.getItem(SEARCH_STORAGE_KEY);
+        if (savedFilters) {
+          const { query, favoritesOnly } = JSON.parse(savedFilters);
+          if (query) setSearchQuery(query);
+          if (favoritesOnly) setShowFavoritesOnly(favoritesOnly);
+        }
+      } catch (error) {
+        console.error('Error loading saved filters:', error);
+      }
+    }
+  }, []);
+
+  // Limpiar filtros cuando cambie el perfil
+  useEffect(() => {
+    setSearchQuery('');
+    setShowFavoritesOnly(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(SEARCH_STORAGE_KEY);
+    }
+  }, [currentProfile?.id]);
+
+  // Implementar debounce para la búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms de delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Guardar filtros cuando cambien
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(SEARCH_STORAGE_KEY, JSON.stringify({
+          query: searchQuery,
+          favoritesOnly: showFavoritesOnly
+        }));
+      } catch (error) {
+        console.error('Error saving filters:', error);
+      }
+    }
+  }, [searchQuery, showFavoritesOnly]);
+
+  // Función de filtrado inteligente
+  const filteredCards = useMemo(() => {
+    let filtered = cards;
+
+    // Filtrar por favoritos si está activado
+    if (showFavoritesOnly) {
+      filtered = filtered.filter(card => card.isFavorite);
+    }
+
+    // Filtrar por búsqueda si hay query
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase().trim();
+      
+      // Primero verificar si es un término de búsqueda especial
+      if (isSpecialSearchTerm(query)) {
+        filtered = filtered.filter(card => applySpecialSearch(query, card));
+      } else {
+        filtered = filtered.filter(card => {
+          // Buscar en el nombre del módulo
+          if (card.topic.toLowerCase().includes(query)) return true;
+          
+          // Buscar en el nombre personalizado si existe
+          if (card.name && card.name.toLowerCase().includes(query)) return true;
+          
+          // Buscar en las instrucciones personalizadas
+          if (card.customInstructions && card.customInstructions.toLowerCase().includes(query)) return true;
+          
+          // Buscar con mapeo bilingüe
+          const topicConfig = findTopicConfig(query);
+          if (topicConfig && topicConfig !== findTopicConfig('default')) {
+            // Si encontramos un tema que coincide, verificar si la tarjeta es de ese tema
+            const cardTopicConfig = findTopicConfig(card.topic);
+            if (cardTopicConfig === topicConfig) return true;
+          }
+          
+          // Buscar si el query normalizado coincide con el topic normalizado
+          const normalizedQuery = getNormalizedTopicName(query);
+          const normalizedCardTopic = getNormalizedTopicName(card.topic);
+          if (normalizedCardTopic.toLowerCase().includes(normalizedQuery.toLowerCase())) return true;
+          
+          // Búsqueda fuzzy para errores tipográficos
+          if (query.length > 3) {
+            // Buscar con tolerancia a errores en el topic
+            if (fuzzySearch(query, card.topic, 2)) return true;
+            
+            // Buscar con tolerancia en el nombre personalizado
+            if (card.name && fuzzySearch(query, card.name, 2)) return true;
+          }
+          
+          return false;
+        });
+      }
+    }
+
+    return filtered;
+  }, [cards, debouncedSearchQuery, showFavoritesOnly]);
 
   const getDifficultyColor = (difficulty: number) => {
     if (difficulty <= 3) return 'bg-green-500';
@@ -98,6 +215,44 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
         </Button>
       </div>
 
+      {/* Barra de búsqueda */}
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Buscar módulos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {searchQuery !== debouncedSearchQuery ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <X className="h-4 w-4" />
+                )}
+              </button>
+            )}
+          </div>
+          <Button
+            variant={showFavoritesOnly ? "default" : "outline"}
+            size="default"
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className="flex items-center gap-2"
+          >
+            <Star className={`h-4 w-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+            <span className="hidden sm:inline">Solo favoritos</span>
+            <span className="sm:hidden">Favoritos</span>
+          </Button>
+        </div>
+      </div>
+
       {/* Sección de Práctica Múltiple */}
       <div className="mb-4">
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 overflow-hidden">
@@ -120,18 +275,18 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
                   variant="default"
                   size="sm"
                   className={`w-full h-auto py-2 px-3 bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white shadow-sm ${
-                    cards.filter(c => c.isFavorite).length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                    filteredCards.filter(c => c.isFavorite).length === 0 ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
-                  disabled={cards.filter(c => c.isFavorite).length === 0}
+                  disabled={filteredCards.filter(c => c.isFavorite).length === 0}
                   onClick={() => onMultiPractice('favorites')}
                 >
                   <div className="flex flex-col items-center gap-0.5">
                     <Star className="h-4 w-4" />
                     <span className="text-sm font-medium">Solo Favoritas</span>
                     <span className="text-xs opacity-90">
-                      {cards.filter(c => c.isFavorite).length === 0 
+                      {filteredCards.filter(c => c.isFavorite).length === 0 
                         ? 'No tienes favoritas' 
-                        : `${cards.filter(c => c.isFavorite).length} disponibles`}
+                        : `${filteredCards.filter(c => c.isFavorite).length} disponibles`}
                     </span>
                   </div>
                 </Button>
@@ -149,7 +304,7 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
                     <Eye className="h-4 w-4" />
                     <span className="text-sm font-medium">Todas las Operaciones</span>
                     <span className="text-xs opacity-90">
-                      {cards.length} disponibles
+                      {filteredCards.length} disponibles
                     </span>
                   </div>
                 </Button>
@@ -159,16 +314,49 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card) => {
-          const poolStatus = exerciseCache.getPoolStatus(card.id);
-          return (
-            <Card 
-              key={card.id} 
-              className={`relative transition-all hover:shadow-lg overflow-hidden ${
-                card.isFavorite ? 'ring-2 ring-yellow-400' : ''
-              }`}
-            >
+      {/* Lista de tarjetas con animaciones */}
+      {filteredCards.length === 0 && (debouncedSearchQuery || showFavoritesOnly) ? (
+        <Card className="p-8 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <Search className="h-12 w-12 text-muted-foreground" />
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">No se encontraron resultados</h3>
+              <p className="text-sm text-muted-foreground">
+                {showFavoritesOnly && !debouncedSearchQuery ? (
+                  "No tienes módulos marcados como favoritos"
+                ) : debouncedSearchQuery ? (
+                  `No se encontraron módulos que coincidan con "${debouncedSearchQuery}"`
+                ) : (
+                  "Intenta con otros términos de búsqueda"
+                )}
+              </p>
+              {(debouncedSearchQuery || showFavoritesOnly) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setShowFavoritesOnly(false);
+                  }}
+                  className="mt-4"
+                >
+                  Limpiar filtros
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredCards.map((card) => {
+            const poolStatus = exerciseCache.getPoolStatus(card.id);
+            return (
+              <Card 
+                key={card.id} 
+                className={`relative transition-all duration-300 hover:shadow-lg overflow-hidden animate-in fade-in-50 ${
+                  card.isFavorite ? 'ring-2 ring-yellow-400' : ''
+                }`}
+              >
             {/* Colored Header */}
             {card.color && (
               <div 
@@ -284,6 +472,7 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
           );
         })}
       </div>
+      )}
     </div>
   );
 }
