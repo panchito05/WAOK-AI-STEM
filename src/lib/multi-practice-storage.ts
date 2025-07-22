@@ -1,12 +1,16 @@
 import { MultiPracticeSession } from './storage';
+import { getCurrentProfileStorageKey } from './profiles';
 
-const MULTI_PRACTICE_STORAGE_KEY = 'mathminds_multi_practice_session';
+const BASE_MULTI_PRACTICE_KEY = 'mathminds_multi_practice_session';
+
+// Helper to get current storage key
+const getStorageKey = () => getCurrentProfileStorageKey(BASE_MULTI_PRACTICE_KEY);
 
 export const multiPracticeStorage = {
   // Guardar sesión activa
   saveSession: (session: MultiPracticeSession): void => {
     try {
-      localStorage.setItem(MULTI_PRACTICE_STORAGE_KEY, JSON.stringify(session));
+      localStorage.setItem(getStorageKey(), JSON.stringify(session));
     } catch (error) {
       console.error('Error saving multi-practice session:', error);
     }
@@ -15,7 +19,7 @@ export const multiPracticeStorage = {
   // Obtener sesión activa
   getActiveSession: (): MultiPracticeSession | null => {
     try {
-      const stored = localStorage.getItem(MULTI_PRACTICE_STORAGE_KEY);
+      const stored = localStorage.getItem(getStorageKey());
       if (!stored) return null;
       
       const session = JSON.parse(stored) as MultiPracticeSession;
@@ -102,7 +106,7 @@ export const multiPracticeStorage = {
   // Limpiar sesión
   clearSession: (): void => {
     try {
-      localStorage.removeItem(MULTI_PRACTICE_STORAGE_KEY);
+      localStorage.removeItem(getStorageKey());
     } catch (error) {
       console.error('Error clearing multi-practice session:', error);
     }

@@ -1,3 +1,5 @@
+import { getCurrentProfileStorageKey } from './profiles';
+
 export interface UserPreferences {
   autoAdvance: {
     [cardId: string]: boolean;
@@ -7,7 +9,10 @@ export interface UserPreferences {
   };
 }
 
-const PREFERENCES_KEY = 'mathminds_preferences';
+const BASE_PREFERENCES_KEY = 'mathminds_preferences';
+
+// Helper to get current preferences key
+const getPreferencesKey = () => getCurrentProfileStorageKey(BASE_PREFERENCES_KEY);
 
 export const userPreferences = {
   // Get all preferences
@@ -15,7 +20,10 @@ export const userPreferences = {
     if (typeof window === 'undefined') return { autoAdvance: {}, keepNumpadOpen: {} };
     
     try {
-      const stored = localStorage.getItem(PREFERENCES_KEY);
+      // Migrate from old key if needed
+      this.migrateFromOldKey();
+      
+      const stored = localStorage.getItem(getPreferencesKey());
       if (!stored) return { autoAdvance: {}, keepNumpadOpen: {} };
       
       const parsed = JSON.parse(stored) as UserPreferences;
@@ -43,7 +51,7 @@ export const userPreferences = {
     try {
       const prefs = this.getAll();
       prefs.autoAdvance[cardId] = enabled;
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
+      localStorage.setItem(getPreferencesKey(), JSON.stringify(prefs));
     } catch (error) {
       console.error('Error saving preferences:', error);
     }
@@ -62,7 +70,7 @@ export const userPreferences = {
     try {
       const prefs = this.getAll();
       prefs.keepNumpadOpen[cardId] = enabled;
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
+      localStorage.setItem(getPreferencesKey(), JSON.stringify(prefs));
     } catch (error) {
       console.error('Error saving preferences:', error);
     }
@@ -76,7 +84,7 @@ export const userPreferences = {
       const prefs = this.getAll();
       delete prefs.autoAdvance[cardId];
       delete prefs.keepNumpadOpen[cardId];
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
+      localStorage.setItem(getPreferencesKey(), JSON.stringify(prefs));
     } catch (error) {
       console.error('Error clearing card preferences:', error);
     }
@@ -85,6 +93,26 @@ export const userPreferences = {
   // Clear all preferences
   clearAll(): void {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem(PREFERENCES_KEY);
+    localStorage.removeItem(getPreferencesKey());
+  },
+  
+  // Migrate data from old key to profile-specific key
+  migrateFromOldKey(): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      // Check if there's data in the old key
+      const oldData = localStorage.getItem(BASE_PREFERENCES_KEY);
+      const currentKey = getPreferencesKey();
+      
+      // If old data exists and new key doesn't have data, migrate
+      if (oldData && !localStorage.getItem(currentKey)) {
+        console.log('Migrating preferences to profile-specific storage');
+        localStorage.setItem(currentKey, oldData);
+        // Don't remove old data yet, keep for other profiles that might need migration
+      }
+    } catch (error) {
+      console.error('Error migrating preferences:', error);
+    }
   }
 };

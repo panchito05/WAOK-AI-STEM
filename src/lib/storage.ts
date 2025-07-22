@@ -6,6 +6,7 @@ export interface StructuredExample {
 }
 
 import { migrateAllCards } from './migrate-cards';
+import { getCurrentProfileStorageKey, profilesStorage } from './profiles';
 
 export interface PracticeCard {
   id: string;
@@ -68,7 +69,10 @@ export interface MultiPracticeSession {
   totalIncorrect: number;
 }
 
-const STORAGE_KEY = 'mathminds_practice_cards';
+const BASE_STORAGE_KEY = 'mathminds_practice_cards';
+
+// Helper to get current storage key
+const getStorageKey = () => getCurrentProfileStorageKey(BASE_STORAGE_KEY);
 
 // Función para calcular la solución de un problema matemático simple
 function calculateSolution(problem: string): string {
@@ -178,7 +182,10 @@ export const cardStorage = {
     if (typeof window === 'undefined') return [];
     
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      // First check if we need to migrate data from old key
+      this.migrateFromOldKey();
+      
+      const stored = localStorage.getItem(getStorageKey());
       if (!stored) return [];
       
       const cards = JSON.parse(stored) as PracticeCard[];
@@ -282,7 +289,7 @@ export const cardStorage = {
     if (typeof window === 'undefined') return;
     
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+      localStorage.setItem(getStorageKey(), JSON.stringify(cards));
     } catch (error) {
       console.error('Error saving cards:', error);
     }
@@ -291,7 +298,27 @@ export const cardStorage = {
   // Clear all cards (useful for testing)
   clearAll(): void {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(getStorageKey());
+  },
+  
+  // Migrate data from old key to profile-specific key
+  migrateFromOldKey(): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      // Check if there's data in the old key
+      const oldData = localStorage.getItem(BASE_STORAGE_KEY);
+      const currentKey = getStorageKey();
+      
+      // If old data exists and new key doesn't have data, migrate
+      if (oldData && !localStorage.getItem(currentKey)) {
+        console.log('Migrating cards to profile-specific storage');
+        localStorage.setItem(currentKey, oldData);
+        // Don't remove old data yet, keep for other profiles that might need migration
+      }
+    } catch (error) {
+      console.error('Error migrating cards:', error);
+    }
   }
 };
 

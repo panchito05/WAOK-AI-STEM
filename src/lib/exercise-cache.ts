@@ -1,5 +1,6 @@
 // Exercise caching system for instant practice sessions
 import { generatePracticeSessionAction } from '@/app/actions';
+import { getCurrentProfileStorageKey } from './profiles';
 
 export interface Exercise {
   id: string;
@@ -18,7 +19,10 @@ export interface ExercisePool {
   lastGenerated: string;
 }
 
-const CACHE_KEY = 'mathminds_exercise_pools';
+const BASE_CACHE_KEY = 'mathminds_exercise_pools';
+
+// Helper to get current cache key
+const getCacheKey = () => getCurrentProfileStorageKey(BASE_CACHE_KEY);
 const TARGET_POOL_SIZE = 30;  // Pool óptimo de ejercicios
 const MINIMUM_POOL_SIZE = 10;  // Mínimo antes de regenerar
 const ROTATION_DAYS = 7;       // Días antes de reutilizar ejercicios
@@ -31,7 +35,10 @@ export const exerciseCache = {
     if (typeof window === 'undefined') return {};
     
     try {
-      const stored = localStorage.getItem(CACHE_KEY);
+      // Migrate from old key if needed
+      this.migrateFromOldKey();
+      
+      const stored = localStorage.getItem(getCacheKey());
       return stored ? JSON.parse(stored) : {};
     } catch (error) {
       console.error('Error loading exercise pools:', error);
@@ -50,7 +57,7 @@ export const exerciseCache = {
     if (typeof window === 'undefined') return;
     
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(pools));
+      localStorage.setItem(getCacheKey(), JSON.stringify(pools));
     } catch (error) {
       console.error('Error saving exercise pools:', error);
     }
@@ -353,7 +360,27 @@ export const exerciseCache = {
   // Clear all pools
   clearAllPools(): void {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(getCacheKey());
+  },
+  
+  // Migrate data from old key to profile-specific key
+  migrateFromOldKey(): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      // Check if there's data in the old key
+      const oldData = localStorage.getItem(BASE_CACHE_KEY);
+      const currentKey = getCacheKey();
+      
+      // If old data exists and new key doesn't have data, migrate
+      if (oldData && !localStorage.getItem(currentKey)) {
+        console.log('Migrating exercise pools to profile-specific storage');
+        localStorage.setItem(currentKey, oldData);
+        // Don't remove old data yet, keep for other profiles that might need migration
+      }
+    } catch (error) {
+      console.error('Error migrating exercise pools:', error);
+    }
   },
 
   // Get pool status (for debugging/UI)

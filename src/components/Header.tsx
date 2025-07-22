@@ -1,5 +1,5 @@
-import { BrainCircuit, User } from 'lucide-react';
-import { Button } from './ui/button';
+import { BrainCircuit } from 'lucide-react';
+import ProfileSelector from './ProfileSelector';
 
 export default function Header() {
   // Check if API key exists (will be true when configured)
@@ -23,10 +23,7 @@ export default function Header() {
               {hasApiKey ? 'IA Conectada' : 'Modo Demo'}
             </span>
           </div>
-          <Button variant="outline" size="icon" className="rounded-full">
-            <User className="h-5 w-5" />
-            <span className="sr-only">Toggle user menu</span>
-          </Button>
+          <ProfileSelector />
         </div>
       </nav>
     </header>

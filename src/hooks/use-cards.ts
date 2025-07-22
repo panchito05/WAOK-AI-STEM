@@ -4,15 +4,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { PracticeCard, cardStorage, DEFAULT_CARDS } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { exerciseCache } from '@/lib/exercise-cache';
+import { useProfile } from '@/contexts/ProfileContext';
 
 export function useCards() {
   const [cards, setCards] = useState<PracticeCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { currentProfile } = useProfile();
 
-  // Load cards on mount
+  // Load cards on mount and when profile changes
   useEffect(() => {
-    loadCards();
+    if (currentProfile) {
+      loadCards();
+    }
     
     // Limpiar ejercicios antiguos al cargar la app
     setTimeout(() => {
@@ -23,7 +27,7 @@ export function useCards() {
       const metrics = exerciseCache.getUsageMetrics();
       console.log('Global exercise pool metrics:', metrics);
     }, 2000); // Esperar a que se carguen las tarjetas
-  }, []);
+  }, [currentProfile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCards = useCallback(() => {
     setIsLoading(true);
