@@ -349,8 +349,11 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
 
     setRegeneratingLevel(level);
     
+    // Count current examples to maintain the same quantity
+    const currentExampleCount = structuredExamples[level]?.length || 3;
+    
     try {
-      const result = await api.generateExamplesForSingleLevel(currentTopic, level, currentInstructions);
+      const result = await api.generateExamplesForSingleLevel(currentTopic, level, currentInstructions, currentExampleCount);
       
       if (result.error) {
         throw new Error(result.error);

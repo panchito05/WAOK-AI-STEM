@@ -19,7 +19,7 @@ export interface ExercisePool {
   lastGenerated: string;
 }
 
-const BASE_CACHE_KEY = 'mathminds_exercise_pools';
+const BASE_CACHE_KEY = 'waok_exercise_pools';
 
 // Helper to get current cache key
 const getCacheKey = () => getCurrentProfileStorageKey(BASE_CACHE_KEY);

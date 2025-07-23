@@ -227,7 +227,7 @@ export function usePracticeHistory(): UsePracticeHistoryReturn {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `mathminds_history_${new Date().toISOString().split('T')[0]}.${format}`;
+      a.download = `waok_history_${new Date().toISOString().split('T')[0]}.${format}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

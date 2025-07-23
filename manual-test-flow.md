@@ -1,4 +1,4 @@
-# 🧪 Flujo de Pruebas Manual - MathMinds
+# 🧪 Flujo de Pruebas Manual - WAOK-AI-STEM
 
 Este documento describe el flujo completo de pruebas para verificar que todas las funcionalidades del sistema funcionan correctamente.
 

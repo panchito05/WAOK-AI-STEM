@@ -101,10 +101,10 @@ export async function checkAnswer(data: {
 }
 
 // Generate Examples for Single Level
-export async function generateExamplesForSingleLevel(topic: string, level: number, customInstructions?: string) {
+export async function generateExamplesForSingleLevel(topic: string, level: number, customInstructions?: string, count?: number) {
   return fetchAPI<{ [level: number]: any[] }>('/api/generate-single-level', {
     method: 'POST',
-    body: JSON.stringify({ topic, level, customInstructions }),
+    body: JSON.stringify({ topic, level, customInstructions, count }),
   });
 }
 

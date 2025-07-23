@@ -69,7 +69,7 @@ export interface MultiPracticeSession {
   totalIncorrect: number;
 }
 
-const BASE_STORAGE_KEY = 'mathminds_practice_cards';
+const BASE_STORAGE_KEY = 'waok_practice_cards';
 
 // Helper to get current storage key
 const getStorageKey = () => getCurrentProfileStorageKey(BASE_STORAGE_KEY);

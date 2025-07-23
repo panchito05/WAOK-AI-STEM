@@ -9,7 +9,7 @@ export interface UserPreferences {
   };
 }
 
-const BASE_PREFERENCES_KEY = 'mathminds_preferences';
+const BASE_PREFERENCES_KEY = 'waok_preferences';
 
 // Helper to get current preferences key
 const getPreferencesKey = () => getCurrentProfileStorageKey(BASE_PREFERENCES_KEY);

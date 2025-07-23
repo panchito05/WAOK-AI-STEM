@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MathMinds is an AI-powered math tutoring application for children built with Next.js 15, TypeScript, and Google Genkit AI integration. It provides personalized math exercises, visual problem solving through camera input, and gamified progress tracking.
+WAOK-AI-STEM is an AI-powered math tutoring application for children built with Next.js 15, TypeScript, and Google Genkit AI integration. It provides personalized math exercises, visual problem solving through camera input, and gamified progress tracking.
 
-**🌐 Production URL**: https://mathminds-app.netlify.app  
-**📊 Netlify Dashboard**: https://app.netlify.com/projects/mathminds-app
+**🌐 Production URL**: https://waok-ai-stem.netlify.app  
+**📊 Netlify Dashboard**: https://app.netlify.com/projects/waok-ai-stem
 
 ### Future Architecture: GenAI Processors
 
@@ -127,7 +127,7 @@ GenAI Processors provides:
 2. **ProcessorParts**: Standardized data chunks (audio, text, images) with metadata
 3. **Stream Composition**: Use `+` operator to chain processors naturally
 
-### Example Implementation for MathMinds
+### Example Implementation for WAOK-AI-STEM
 
 ```python
 # Live math tutor with audio/video input
@@ -188,9 +188,9 @@ When migrating to GenAI Processors:
 The application is currently deployed on Netlify with the following configuration:
 
 #### Production URLs
-- **Main URL**: https://mathminds-app.netlify.app
-- **Deploy URL**: https://688055b5ceefc9b3de59b5f5--mathminds-app.netlify.app
-- **Admin Panel**: https://app.netlify.com/projects/mathminds-app
+- **Main URL**: https://waok-ai-stem.netlify.app
+- **Deploy URL**: https://688055b5ceefc9b3de59b5f5--waok-ai-stem.netlify.app
+- **Admin Panel**: https://app.netlify.com/projects/waok-ai-stem
 
 #### Deployment Details
 - **Site ID**: 44dfe813-0fd0-4097-9841-73ed7b0c07b7

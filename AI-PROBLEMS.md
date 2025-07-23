@@ -1,62 +1,26 @@
-# 🚨 AI-PROBLEMS - Registro de Problemas y Soluciones
+# AI-PROBLEMS.md
 
-## 📋 Estructura del Documento
-Este archivo documenta problemas encontrados durante el desarrollo con IA y sus soluciones.
+## Problema: Pérdida de Ejemplos al Regenerar
 
-## 🔴 Problemas Críticos
+### Descripción del Problema
+Cuando un usuario tiene múltiples ejemplos en un nivel (por ejemplo, 5 ejemplos: 3 generados por IA y 2 agregados manualmente) y presiona el botón de regenerar, el sistema siempre genera solo 3 ejemplos nuevos en lugar de mantener la cantidad total de 5, perdiendo así los ejemplos extras que el usuario había agregado.
 
-### Problema #001: [Pendiente]
-- **Fecha**: -
-- **Descripción**: -
-- **Impacto**: -
-- **Solución**: -
-- **Estado**: ⏳ Pendiente
+### Comportamiento Esperado
+El sistema debería contar la cantidad total de ejemplos actuales antes de regenerar y usar ese número para generar la misma cantidad de ejemplos nuevos, manteniendo así la experiencia del usuario que esperaba trabajar con 5 ejemplos y no verse reducido a solo 3.
 
-## 🟡 Problemas Moderados
+### Ejemplo del Caso de Uso
+1. Usuario crea una tarjeta nueva → Sistema genera 3 ejemplos por defecto ✓
+2. Usuario agrega manualmente 2 ejemplos más → Total: 5 ejemplos ✓
+3. Usuario presiona "Regenerar ejemplos" → Sistema debería generar 5 nuevos ejemplos ✗
+4. Resultado actual: Sistema genera solo 3 ejemplos, perdiendo la cantidad adicional
 
-### Problema #002: Limitaciones de Genkit
-- **Fecha**: 2025-07-12
-- **Descripción**: Genkit no soporta streaming nativo para respuestas en tiempo real
-- **Impacto**: Mayor latencia en interacciones
-- **Solución**: Planificada migración a GenAI Processors
-- **Estado**: 🔄 En progreso
+### Impacto en la Experiencia del Usuario
+- Frustración al perder trabajo manual (ejemplos agregados)
+- Necesidad de volver a agregar ejemplos después de cada regeneración
+- Interrupción del flujo de trabajo educativo
 
-## 🟢 Problemas Resueltos
+### Solución Intentada
+Se implementó un sistema de conteo de ejemplos actuales que pasa la cantidad como parámetro a través de toda la cadena de llamadas (Frontend → API → Backend), pero la solución no funcionó como se esperaba.
 
-### Problema #003: [Ejemplo]
-- **Fecha**: -
-- **Descripción**: -
-- **Impacto**: -
-- **Solución**: -
-- **Estado**: ✅ Resuelto
-
-## 📊 Patrones Comunes Identificados
-
-### 1. Rendimiento
-- Problemas de latencia con modelos grandes
-- Optimización de prompts para reducir tokens
-
-### 2. Integración
-- Manejo de errores en APIs de IA
-- Sincronización frontend-backend
-
-### 3. UX/UI
-- Feedback visual durante procesamiento
-- Manejo de timeouts en respuestas largas
-
-## 🛠️ Herramientas de Diagnóstico
-- Logs de Genkit Dev Server
-- Métricas de rendimiento de Next.js
-- Análisis de tokens y costos
-
-## 📝 Template para Nuevos Problemas
-```markdown
-### Problema #XXX: [Título Descriptivo]
-- **Fecha**: YYYY-MM-DD
-- **Descripción**: [Detalle del problema]
-- **Impacto**: [Bajo/Medio/Alto/Crítico]
-- **Solución**: [Descripción o "Pendiente"]
-- **Estado**: [⏳ Pendiente / 🔄 En progreso / ✅ Resuelto]
-```
-
-*Última actualización: 2025-07-12*
+### Estado Actual
+Pendiente de investigación adicional para identificar por qué la implementación no está funcionando correctamente.

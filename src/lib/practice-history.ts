@@ -69,8 +69,8 @@ export interface Achievement {
   type: 'milestone' | 'streak' | 'speed' | 'accuracy' | 'special';
 }
 
-const HISTORY_STORAGE_KEY = 'mathminds_practice_history';
-const ACHIEVEMENTS_STORAGE_KEY = 'mathminds_achievements';
+const HISTORY_STORAGE_KEY = 'waok_practice_history';
+const ACHIEVEMENTS_STORAGE_KEY = 'waok_achievements';
 
 export const practiceHistoryStorage = {
   // Get storage key for current profile

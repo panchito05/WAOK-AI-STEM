@@ -27,7 +27,7 @@ La aplicación usa una API key gratuita con límite de 200 solicitudes diarias. 
 ## Configuración en Netlify (producción)
 
 1. **Ve al panel de Netlify**
-   - https://app.netlify.com/sites/mathminds-app/settings/env
+   - https://app.netlify.com/sites/waok-ai-stem/settings/env
 
 2. **Añade la variable de entorno**
    - Variable name: `GEMINI_API_KEY`

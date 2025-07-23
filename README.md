@@ -1,8 +1,8 @@
-# MathMinds - AI-Powered Math Tutoring App
+# WAOK-AI-STEM - AI-Powered Math Tutoring App
 
-MathMinds is an AI-powered math tutoring application for children built with Next.js 15, TypeScript, and Google Genkit AI integration.
+WAOK-AI-STEM is an AI-powered math tutoring application for children built with Next.js 15, TypeScript, and Google Genkit AI integration.
 
-🌐 **Live Demo**: https://mathminds-app.netlify.app
+🌐 **Live Demo**: https://waok-ai-stem.netlify.app
 
 ## Prerequisites
 

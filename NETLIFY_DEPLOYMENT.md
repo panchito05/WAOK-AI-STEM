@@ -1,9 +1,9 @@
-# Guía de Despliegue en Netlify para MathMinds
+# Guía de Despliegue en Netlify para WAOK-AI-STEM
 
 ## 🎉 Estado Actual: DESPLEGADO
 
-- **URL de Producción**: https://mathminds-app.netlify.app
-- **Panel de Administración**: https://app.netlify.com/projects/mathminds-app
+- **URL de Producción**: https://waok-ai-stem.netlify.app
+- **Panel de Administración**: https://app.netlify.com/projects/waok-ai-stem
 - **Última actualización**: 23 de Julio de 2025
 
 ## Pasos para el Despliegue
@@ -140,14 +140,14 @@ Las siguientes funciones están disponibles en las rutas:
    - Actualizado todos los componentes para usar el nuevo cliente
 
 3. **Configuración en Netlify**:
-   - Creado nuevo sitio: mathminds-app
+   - Creado nuevo sitio: waok-ai-stem
    - Configurada variable de entorno GEMINI_API_KEY
    - Desplegado usando Netlify MCP tools
 
 4. **Resultados**:
    - Build completado en 85 segundos
    - 6 funciones serverless desplegadas
-   - Sitio activo en https://mathminds-app.netlify.app
+   - Sitio activo en https://waok-ai-stem.netlify.app
 
 **Detalles técnicos del despliegue:**
 - Site ID: 44dfe813-0fd0-4097-9841-73ed7b0c07b7

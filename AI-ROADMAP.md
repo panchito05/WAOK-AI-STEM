@@ -1,7 +1,7 @@
 # 🗺️ AI-ROADMAP - Hoja de Ruta de Desarrollo con IA
 
 ## 📋 Visión General
-Este documento define la estrategia y evolución del uso de IA en el proyecto MathMinds.
+Este documento define la estrategia y evolución del uso de IA en el proyecto WAOK-AI-STEM.
 
 ## 🎯 Objetivos Principales
 - Migrar a Google GenAI Processors para capacidades en tiempo real

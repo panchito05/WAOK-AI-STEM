@@ -1,4 +1,4 @@
-// Test automatizado para MathMinds - Flujo completo de usuario
+// Test automatizado para WAOK-AI-STEM - Flujo completo de usuario
 // Este script simula el comportamiento de un usuario real desde crear una tarjeta hasta practicar
 
 const puppeteer = require('puppeteer');
@@ -8,7 +8,7 @@ async function wait(ms) {
 }
 
 async function runTests() {
-  console.log('🚀 Iniciando pruebas automatizadas de MathMinds...\n');
+  console.log('🚀 Iniciando pruebas automatizadas de WAOK-AI-STEM...\n');
   
   const browser = await puppeteer.launch({
     headless: false, // Para ver las pruebas en acción

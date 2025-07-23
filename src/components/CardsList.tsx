@@ -41,7 +41,7 @@ interface CardsListProps {
   onMultiPractice: (type: 'favorites' | 'all') => void;
 }
 
-const SEARCH_STORAGE_KEY = 'mathminds_search_filters';
+const SEARCH_STORAGE_KEY = 'waok_search_filters';
 
 export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMultiPractice }: CardsListProps) {
   const { cards, isLoading, toggleFavorite } = useCards();

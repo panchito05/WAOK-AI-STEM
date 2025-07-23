@@ -2,9 +2,9 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  serverExternalPackages: ['genkit', '@genkit-ai/core'],
   experimental: {
     // Disable problematic features that can cause workStore issues
-    serverComponentsExternalPackages: ['genkit', '@genkit-ai/core'],
     optimizePackageImports: ['lucide-react'],
   },
   typescript: {

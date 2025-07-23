@@ -15,7 +15,7 @@ export default function Header() {
           className="flex items-center gap-2 text-lg font-semibold text-primary md:text-base"
         >
           <BrainCircuit className="h-8 w-8 text-primary" />
-          <span className="font-headline text-2xl font-bold tracking-tight">MathMinds</span>
+          <span className="font-headline text-2xl font-bold tracking-tight">WAOK-AI-STEM</span>
         </a>
 
         <div className="flex items-center gap-3">

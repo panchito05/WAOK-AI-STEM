@@ -8,8 +8,8 @@ export interface Profile {
   lastActiveAt: string;
 }
 
-const PROFILES_KEY = 'mathminds_profiles';
-const ACTIVE_PROFILE_KEY = 'mathminds_active_profile';
+const PROFILES_KEY = 'waok_profiles';
+const ACTIVE_PROFILE_KEY = 'waok_active_profile';
 const DEFAULT_PROFILE_ID = 'default';
 
 // Default avatars for profiles
@@ -181,10 +181,10 @@ export const profilesStorage = {
       
       // Check if there's existing data
       const hasExistingData = 
-        localStorage.getItem('mathminds_practice_cards') ||
-        localStorage.getItem('mathminds_exercise_pools') ||
-        localStorage.getItem('mathminds_preferences') ||
-        localStorage.getItem('mathminds_multi_practice_session');
+        localStorage.getItem('waok_practice_cards') ||
+        localStorage.getItem('waok_exercise_pools') ||
+        localStorage.getItem('waok_preferences') ||
+        localStorage.getItem('waok_multi_practice_session');
       
       if (!hasExistingData) return; // No data to migrate
       

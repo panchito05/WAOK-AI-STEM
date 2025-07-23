@@ -9,7 +9,8 @@
       "Bash(claude config get)",
       "Bash(claude mcp:*)",
       "Bash(npm run lint)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "mcp__netlify__netlify-project-services"
     ],
     "deny": []
   },

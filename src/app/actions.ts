@@ -359,7 +359,7 @@ function getMockExamplesForLevel(topic: string, level: number): StructuredExampl
 }
 
 // Generate examples for a single level
-export async function generateExamplesForSingleLevelAction(topic: string, level: number, customInstructions?: string) {
+export async function generateExamplesForSingleLevelAction(topic: string, level: number, customInstructions?: string, count?: number) {
   try {
     console.log(`Generating examples for level ${level} and topic "${topic}"...`);
     if (customInstructions) {
@@ -383,9 +383,10 @@ export async function generateExamplesForSingleLevelAction(topic: string, level:
     
     let examples: StructuredExample[] = [];
     
-    if (result.exercises && result.exercises.length >= 3) {
-      // Take first 3 exercises and ensure variety
-      examples = result.exercises.slice(0, 3).map((ex, index) => {
+    const exampleCount = count || 3; // Use provided count or default to 3
+    if (result.exercises && result.exercises.length >= exampleCount) {
+      // Take requested number of exercises and ensure variety
+      examples = result.exercises.slice(0, exampleCount).map((ex, index) => {
         // Add variety to exercise format based on index
         const variedProblem = varyProblemFormat(ex.problem, index, level);
         return {

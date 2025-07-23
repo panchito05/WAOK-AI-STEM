@@ -1,4 +1,4 @@
-# **App Name**: MathMinds
+# **App Name**: WAOK-AI-STEM
 
 ## Core Features:
 

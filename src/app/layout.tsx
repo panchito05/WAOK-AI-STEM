@@ -4,7 +4,7 @@ import './globals.css';
 import ClientLayout from '@/components/ClientLayout'
 
 export const metadata: Metadata = {
-  title: 'MathMinds',
+  title: 'WAOK-AI-STEM',
   description: 'A fun and interactive way for kids to learn math!',
 };
 

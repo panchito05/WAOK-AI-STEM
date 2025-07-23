@@ -1,4 +1,4 @@
-# MathMinds - Manual Test Guide
+# WAOK-AI-STEM - Manual Test Guide
 
 ## 🧪 Test Scenarios
 

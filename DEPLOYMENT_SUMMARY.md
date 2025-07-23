@@ -1,11 +1,11 @@
-# Resumen del Despliegue de MathMinds en Netlify
+# Resumen del Despliegue de WAOK-AI-STEM en Netlify
 
 ## 🚀 Información del Despliegue
 
 ### URLs de Producción
-- **Aplicación en vivo**: https://mathminds-app.netlify.app
-- **URL alternativa**: https://688055b5ceefc9b3de59b5f5--mathminds-app.netlify.app
-- **Panel de administración**: https://app.netlify.com/projects/mathminds-app
+- **Aplicación en vivo**: https://waok-ai-stem.netlify.app
+- **URL alternativa**: https://688055b5ceefc9b3de59b5f5--waok-ai-stem.netlify.app
+- **Panel de administración**: https://app.netlify.com/projects/waok-ai-stem
 
 ### Detalles Técnicos
 - **Plataforma**: Netlify
@@ -36,7 +36,7 @@ Convertidas todas las acciones del servidor a funciones serverless:
 - ✅ Mantenida la compatibilidad con el formato de respuesta `{data, error}`
 
 ### 4. Configuración en Netlify
-- ✅ Creado nuevo proyecto en Netlify con nombre `mathminds-app`
+- ✅ Creado nuevo proyecto en Netlify con nombre `waok-ai-stem`
 - ✅ Configurada variable de entorno `GEMINI_API_KEY`
 - ✅ Ejecutado build local con `npm run build:netlify`
 - ✅ Desplegado usando herramientas MCP de Netlify
@@ -118,7 +118,7 @@ mathminds-app/
 
 ## 📊 Monitoreo
 
-- Ver logs de funciones en: https://app.netlify.com/projects/mathminds-app/logs/functions
+- Ver logs de funciones en: https://app.netlify.com/projects/waok-ai-stem/logs/functions
 - Ver estadísticas de uso en el dashboard de Netlify
 - Las funciones serverless registran errores en la consola de Netlify
 

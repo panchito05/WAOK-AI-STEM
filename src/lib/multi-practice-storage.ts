@@ -1,7 +1,7 @@
 import { MultiPracticeSession } from './storage';
 import { getCurrentProfileStorageKey } from './profiles';
 
-const BASE_MULTI_PRACTICE_KEY = 'mathminds_multi_practice_session';
+const BASE_MULTI_PRACTICE_KEY = 'waok_multi_practice_session';
 
 // Helper to get current storage key
 const getStorageKey = () => getCurrentProfileStorageKey(BASE_MULTI_PRACTICE_KEY);

@@ -42,7 +42,7 @@ export default function ProfileSelector() {
     if (profileId === currentProfile?.id) return;
     
     // Check if there's a practice session in progress
-    const hasActiveSession = localStorage.getItem('mathminds_multi_practice_session');
+    const hasActiveSession = localStorage.getItem('waok_multi_practice_session');
     
     if (hasActiveSession) {
       const confirmed = window.confirm(
