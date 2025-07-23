@@ -3,7 +3,7 @@
 import { generatePersonalizedExercises } from '@/ai/flows/generate-personalized-exercises';
 import { solveMathProblemVisually } from '@/ai/flows/solve-math-problems-visually';
 import { z } from 'zod';
-import { StructuredExample } from '@/lib/storage';
+import { StructuredExample, calculateSolution } from '@/lib/storage';
 
 const generateExercisesSchema = z.object({
   level: z.string(),
@@ -80,7 +80,7 @@ function generateMockExercises(level: string, topic: string) {
           problem: `${a} + ${b} = ?`,
           solution: (a + b).toString(),
           explanation: `${a} + ${b}: ${a} + ${b} = ${a + b}`
-        });
+          });
       }
       break;
       
@@ -96,7 +96,7 @@ function generateMockExercises(level: string, topic: string) {
           problem: `${a} - ${b} = ?`,
           solution: (a - b).toString(),
           explanation: `${a} - ${b}: ${a} - ${b} = ${a - b}`
-        });
+          });
       }
       break;
       
@@ -112,7 +112,7 @@ function generateMockExercises(level: string, topic: string) {
           problem: `${a} × ${b} = ?`,
           solution: (a * b).toString(),
           explanation: `${a} × ${b}: ${a} × ${b} = ${a * b}`
-        });
+          });
       }
       break;
       
@@ -129,7 +129,7 @@ function generateMockExercises(level: string, topic: string) {
           problem: `${a} ÷ ${b} = ?`,
           solution: result.toString(),
           explanation: `${a} ÷ ${b}: ${a} ÷ ${b} = ${result}`
-        });
+          });
       }
       break;
       
@@ -140,7 +140,7 @@ function generateMockExercises(level: string, topic: string) {
           problem: `Ejercicio ${i + 1} de ${topic}`,
           solution: "Ver con API key",
           explanation: `Para ejercicios de "${topic}", active la conexión con Gemini AI para obtener ejercicios específicos y personalizados.`
-        });
+          });
       }
   }
   
@@ -343,7 +343,7 @@ export async function generateExamplesForAllLevelsAction(topic: string) {
           level: levelToDifficulty(level),
           topic: topic,
           structuredExamples: getBaseExamplesForLevel(topic, level)
-        });
+          });
         
         if (result.exercises && result.exercises.length >= 3) {
           // Take first 3 exercises and ensure variety
@@ -355,7 +355,7 @@ export async function generateExamplesForAllLevelsAction(topic: string) {
               solution: ex.solution,
               explanation: ex.explanation
             };
-          });
+            });
         } else {
           // Fallback to mock examples if generation fails
           allExamples[level] = getMockExamplesForLevel(topic, level);
@@ -437,42 +437,49 @@ function getBaseExamplesForLevel(topic: string, level: number): StructuredExampl
 function generateAdditionExamples(level: number, range: any): StructuredExample[] {
   const examples: StructuredExample[] = [];
   
-  if (level <= 3) {
-    const a = Math.floor(Math.random() * (range.max - range.min) + range.min);
-    const b = Math.floor(Math.random() * (range.max - range.min) + range.min);
-    examples.push({
-      problem: `${a} + ${b} = ?`,
-      solution: (a + b).toString(),
-      explanation: `Para resolver ${a} + ${b}, sumamos: ${a} + ${b} = ${a + b}`
-    });
-  } else if (level <= 6) {
-    const a = Math.floor(Math.random() * (range.max - range.min) + range.min);
-    const b = Math.floor(Math.random() * (range.max - range.min) + range.min);
-    examples.push({
-      problem: `${a} + ${b} = ?`,
-      solution: (a + b).toString(),
-      explanation: `Sumamos ${a} + ${b} = ${a + b}`
-    });
-  } else if (level <= 8 && range.decimal) {
-    const a = (Math.random() * (range.max - range.min) + range.min).toFixed(2);
-    const b = (Math.random() * (range.max - range.min) + range.min).toFixed(2);
-    examples.push({
-      problem: `${a} + ${b} = ?`,
-      solution: (parseFloat(a) + parseFloat(b)).toFixed(2),
-      explanation: `Suma decimal: ${a} + ${b} = ${(parseFloat(a) + parseFloat(b)).toFixed(2)}`
-    });
-  } else if (level === 9) {
-    examples.push({
-      problem: `1/2 + 1/3 = ?`,
-      solution: `5/6`,
-      explanation: `Para sumar fracciones: 1/2 + 1/3 = 3/6 + 2/6 = 5/6`
-    });
-  } else if (level === 10) {
-    examples.push({
-      problem: `∑(i=1 to 5) i = ?`,
-      solution: `15`,
-      explanation: `La suma de los primeros 5 números naturales: 1+2+3+4+5 = 15`
-    });
+  // Generate 3 examples for each level
+  for (let i = 0; i < 3; i++) {
+    if (level <= 3) {
+      const a = Math.floor(Math.random() * (range.max - range.min) + range.min);
+      const b = Math.floor(Math.random() * (range.max - range.min) + range.min);
+      examples.push({
+        problem: `${a} + ${b} = ?`,
+        solution: (a + b).toString(),
+        explanation: `Para resolver ${a} + ${b}, sumamos: ${a} + ${b} = ${a + b}`
+        });
+    } else if (level <= 6) {
+      const a = Math.floor(Math.random() * (range.max - range.min) + range.min);
+      const b = Math.floor(Math.random() * (range.max - range.min) + range.min);
+      examples.push({
+        problem: `${a} + ${b} = ?`,
+        solution: (a + b).toString(),
+        explanation: `Sumamos ${a} + ${b} = ${a + b}`
+        });
+    } else if (level <= 8 && range.decimal) {
+      const a = (Math.random() * (range.max - range.min) + range.min).toFixed(2);
+      const b = (Math.random() * (range.max - range.min) + range.min).toFixed(2);
+      examples.push({
+        problem: `${a} + ${b} = ?`,
+        solution: (parseFloat(a) + parseFloat(b)).toFixed(2),
+        explanation: `Suma decimal: ${a} + ${b} = ${(parseFloat(a) + parseFloat(b)).toFixed(2)}`
+        });
+    } else if (level === 9) {
+      // Generate different fraction examples
+      const fractions = [
+        { problem: `1/2 + 1/3 = ?`, solution: `5/6`, explanation: `Para sumar fracciones: 1/2 + 1/3 = 3/6 + 2/6 = 5/6` },
+        { problem: `1/4 + 1/2 = ?`, solution: `3/4`, explanation: `Para sumar fracciones: 1/4 + 1/2 = 1/4 + 2/4 = 3/4` },
+        { problem: `2/3 + 1/6 = ?`, solution: `5/6`, explanation: `Para sumar fracciones: 2/3 + 1/6 = 4/6 + 1/6 = 5/6` }
+      ];
+      examples.push(fractions[i % fractions.length]);
+    } else if (level === 10) {
+      // Generate different advanced examples
+      const advanced = [
+        { problem: `∑(i=1 to 5) i = ?`, solution: `15`, explanation: `La suma de los primeros 5 números naturales: 1+2+3+4+5 = 15` },
+        { problem: `∑(i=1 to 10) i = ?`, solution: `55`, explanation: `La suma de los primeros 10 números naturales: 1+2+...+10 = 55` },
+        { problem: `∑(i=1 to 3) i² = ?`, solution: `14`, explanation: `La suma de los cuadrados: 1² + 2² + 3² = 1 + 4 + 9 = 14` }
+      ];
+      examples.push(advanced[i % advanced.length]);
+    }
   }
   
   return examples;
@@ -482,42 +489,45 @@ function generateAdditionExamples(level: number, range: any): StructuredExample[
 function generateSubtractionExamples(level: number, range: any): StructuredExample[] {
   const examples: StructuredExample[] = [];
   
-  if (level <= 3) {
-    const a = Math.floor(Math.random() * (range.max - range.min) + range.min) + 10;
-    const b = Math.floor(Math.random() * (range.min) + 1);
-    examples.push({
-      problem: `${a} - ${b} = ?`,
-      solution: (a - b).toString(),
-      explanation: `Para resolver ${a} - ${b}, restamos: ${a} - ${b} = ${a - b}`
-    });
-  } else if (level <= 6) {
-    const a = Math.floor(Math.random() * (range.max - range.min) + range.min) + range.min;
-    const b = Math.floor(Math.random() * (range.min) + 1);
-    examples.push({
-      problem: `${a} - ${b} = ?`,
-      solution: (a - b).toString(),
-      explanation: `Restamos ${a} - ${b} = ${a - b}`
-    });
-  } else if (level <= 8 && range.decimal) {
-    const a = (Math.random() * (range.max - range.min) + range.min + 50).toFixed(2);
-    const b = (Math.random() * (range.min) + 1).toFixed(2);
-    examples.push({
-      problem: `${a} - ${b} = ?`,
-      solution: (parseFloat(a) - parseFloat(b)).toFixed(2),
-      explanation: `Resta decimal: ${a} - ${b} = ${(parseFloat(a) - parseFloat(b)).toFixed(2)}`
-    });
-  } else if (level === 9) {
-    examples.push({
-      problem: `3/4 - 1/2 = ?`,
-      solution: `1/4`,
-      explanation: `Para restar fracciones: 3/4 - 1/2 = 3/4 - 2/4 = 1/4`
-    });
-  } else if (level === 10) {
-    examples.push({
-      problem: `\u222B(2x) dx - \u222B(x) dx = ?`,
-      solution: `x\u00B2/2 + C`,
-      explanation: `Resta de integrales: \u222B(2x)dx - \u222B(x)dx = x\u00B2 - x\u00B2/2 = x\u00B2/2 + C`
-    });
+  // Generate 3 examples for each level
+  for (let i = 0; i < 3; i++) {
+    if (level <= 3) {
+      const a = Math.floor(Math.random() * (range.max - range.min) + range.min) + 10;
+      const b = Math.floor(Math.random() * (range.min) + 1);
+      examples.push({
+        problem: `${a} - ${b} = ?`,
+        solution: (a - b).toString(),
+        explanation: `Para resolver ${a} - ${b}, restamos: ${a} - ${b} = ${a - b}`
+        });
+    } else if (level <= 6) {
+      const a = Math.floor(Math.random() * (range.max - range.min) + range.min) + range.min;
+      const b = Math.floor(Math.random() * (range.min) + 1);
+      examples.push({
+        problem: `${a} - ${b} = ?`,
+        solution: (a - b).toString(),
+        explanation: `Restamos ${a} - ${b} = ${a - b}`
+        });
+    } else if (level <= 8 && range.decimal) {
+      const a = (Math.random() * (range.max - range.min) + range.min + 50).toFixed(2);
+      const b = (Math.random() * (range.min) + 1).toFixed(2);
+      examples.push({
+        problem: `${a} - ${b} = ?`,
+        solution: (parseFloat(a) - parseFloat(b)).toFixed(2),
+        explanation: `Resta decimal: ${a} - ${b} = ${(parseFloat(a) - parseFloat(b)).toFixed(2)}`
+        });
+    } else if (level === 9) {
+      examples.push({
+        problem: `3/4 - 1/2 = ?`,
+        solution: `1/4`,
+        explanation: `Para restar fracciones: 3/4 - 1/2 = 3/4 - 2/4 = 1/4`
+        });
+    } else if (level === 10) {
+      examples.push({
+        problem: `\u222B(2x) dx - \u222B(x) dx = ?`,
+        solution: `x\u00B2/2 + C`,
+        explanation: `Resta de integrales: \u222B(2x)dx - \u222B(x)dx = x\u00B2 - x\u00B2/2 = x\u00B2/2 + C`
+        });
+    }
   }
   
   return examples;
@@ -527,42 +537,45 @@ function generateSubtractionExamples(level: number, range: any): StructuredExamp
 function generateMultiplicationExamples(level: number, range: any): StructuredExample[] {
   const examples: StructuredExample[] = [];
   
-  if (level <= 3) {
-    const a = Math.floor(Math.random() * 10) + 1;
-    const b = Math.floor(Math.random() * 10) + 1;
-    examples.push({
+  // Generate 3 examples for each level
+  for (let i = 0; i < 3; i++) {
+    if (level <= 3) {
+      const a = Math.floor(Math.random() * 10) + 1;
+      const b = Math.floor(Math.random() * 10) + 1;
+      examples.push({
       problem: `${a} \u00D7 ${b} = ?`,
       solution: (a * b).toString(),
       explanation: `Para resolver ${a} \u00D7 ${b}, multiplicamos: ${a} \u00D7 ${b} = ${a * b}`
-    });
-  } else if (level <= 6) {
-    const a = Math.floor(Math.random() * 25) + 1;
-    const b = Math.floor(Math.random() * 20) + 1;
-    examples.push({
+      });
+    } else if (level <= 6) {
+      const a = Math.floor(Math.random() * 25) + 1;
+      const b = Math.floor(Math.random() * 20) + 1;
+      examples.push({
       problem: `${a} \u00D7 ${b} = ?`,
       solution: (a * b).toString(),
       explanation: `Multiplicamos ${a} \u00D7 ${b} = ${a * b}`
-    });
-  } else if (level <= 8 && range.decimal) {
-    const a = (Math.random() * 10 + 1).toFixed(1);
-    const b = (Math.random() * 10 + 1).toFixed(1);
-    examples.push({
+      });
+    } else if (level <= 8 && range.decimal) {
+      const a = (Math.random() * 10 + 1).toFixed(1);
+      const b = (Math.random() * 10 + 1).toFixed(1);
+      examples.push({
       problem: `${a} \u00D7 ${b} = ?`,
       solution: (parseFloat(a) * parseFloat(b)).toFixed(2),
       explanation: `Multiplicaci\u00F3n decimal: ${a} \u00D7 ${b} = ${(parseFloat(a) * parseFloat(b)).toFixed(2)}`
-    });
-  } else if (level === 9) {
-    examples.push({
+      });
+    } else if (level === 9) {
+      examples.push({
       problem: `2/3 \u00D7 3/4 = ?`,
       solution: `1/2`,
       explanation: `Para multiplicar fracciones: 2/3 \u00D7 3/4 = (2\u00D73)/(3\u00D74) = 6/12 = 1/2`
-    });
-  } else if (level === 10) {
-    examples.push({
+      });
+    } else if (level === 10) {
+      examples.push({
       problem: `(x + 2)(x - 3) = ?`,
       solution: `x\u00B2 - x - 6`,
       explanation: `Multiplicaci\u00F3n de binomios: (x+2)(x-3) = x\u00B2 - 3x + 2x - 6 = x\u00B2 - x - 6`
-    });
+      });
+    }
   }
   
   return examples;
@@ -572,60 +585,94 @@ function generateMultiplicationExamples(level: number, range: any): StructuredEx
 function generateDivisionExamples(level: number, range: any): StructuredExample[] {
   const examples: StructuredExample[] = [];
   
-  if (level <= 3) {
-    const b = Math.floor(Math.random() * 9) + 1;
-    const result = Math.floor(Math.random() * 10) + 1;
-    const a = b * result;
-    examples.push({
+  // Generate 3 examples for each level
+  for (let i = 0; i < 3; i++) {
+    if (level <= 3) {
+      const b = Math.floor(Math.random() * 9) + 1;
+      const result = Math.floor(Math.random() * 10) + 1;
+      const a = b * result;
+      examples.push({
       problem: `${a} \u00F7 ${b} = ?`,
       solution: result.toString(),
       explanation: `Para resolver ${a} \u00F7 ${b}, dividimos: ${a} \u00F7 ${b} = ${result}`
-    });
-  } else if (level <= 6) {
-    const b = Math.floor(Math.random() * 20) + 1;
-    const result = Math.floor(Math.random() * 50) + 1;
-    const a = b * result;
-    examples.push({
+      });
+    } else if (level <= 6) {
+      const b = Math.floor(Math.random() * 20) + 1;
+      const result = Math.floor(Math.random() * 50) + 1;
+      const a = b * result;
+      examples.push({
       problem: `${a} \u00F7 ${b} = ?`,
       solution: result.toString(),
       explanation: `Dividimos ${a} \u00F7 ${b} = ${result}`
-    });
-  } else if (level <= 8 && range.decimal) {
-    const a = (Math.random() * 100 + 10).toFixed(2);
-    const b = (Math.random() * 10 + 1).toFixed(1);
-    examples.push({
+      });
+    } else if (level <= 8 && range.decimal) {
+      const a = (Math.random() * 100 + 10).toFixed(2);
+      const b = (Math.random() * 10 + 1).toFixed(1);
+      examples.push({
       problem: `${a} \u00F7 ${b} = ?`,
       solution: (parseFloat(a) / parseFloat(b)).toFixed(2),
       explanation: `Divisi\u00F3n decimal: ${a} \u00F7 ${b} = ${(parseFloat(a) / parseFloat(b)).toFixed(2)}`
-    });
-  } else if (level === 9) {
-    examples.push({
+      });
+    } else if (level === 9) {
+      examples.push({
       problem: `3/4 \u00F7 1/2 = ?`,
       solution: `3/2`,
       explanation: `Para dividir fracciones: 3/4 \u00F7 1/2 = 3/4 \u00D7 2/1 = 6/4 = 3/2`
-    });
-  } else if (level === 10) {
-    examples.push({
+      });
+    } else if (level === 10) {
+      examples.push({
       problem: `(x\u00B2 + 5x + 6) \u00F7 (x + 2) = ?`,
       solution: `x + 3`,
       explanation: `Divisi\u00F3n de polinomios: (x\u00B2+5x+6)\u00F7(x+2) = x+3`
-    });
+      });
+    }
   }
   
   return examples;
 }
 
-// Get mock examples for fallback
+// Get mock examples for fallback - now generates real exercises
 function getMockExamplesForLevel(topic: string, level: number): StructuredExample[] {
-  const examples: StructuredExample[] = [];
-  for (let i = 0; i < 3; i++) {
-    examples.push({
-      problem: `${topic} - Nivel ${level} - Ejercicio ${i + 1}`,
-      solution: `Respuesta ${i + 1}`,
-      explanation: `Explicación para el ejercicio ${i + 1} del nivel ${level}`
-    });
+  // Use the existing base examples generator which creates real math problems
+  const baseExamples = getBaseExamplesForLevel(topic, level);
+  
+  // If we get valid examples, return them
+  if (baseExamples.length > 0 && !baseExamples[0].problem.includes('Ejemplo 1')) {
+    // Generate 3 examples if we only got 1
+    const examples: StructuredExample[] = [];
+    for (let i = 0; i < 3; i++) {
+      if (i < baseExamples.length) {
+        examples.push(baseExamples[i]);
+      } else {
+        // Generate additional examples based on the first one
+        const newExample = { ...baseExamples[0] };
+        // Slightly modify the numbers to create variation
+        if (newExample.problem.match(/\d+/g)) {
+          const numbers = newExample.problem.match(/\d+/g)!;
+          const modifiedProblem = newExample.problem.replace(numbers[0], String(parseInt(numbers[0]) + i + 1));
+          newExample.problem = modifiedProblem;
+          // Recalculate solution
+          newExample.solution = calculateSolution(modifiedProblem);
+          newExample.explanation = newExample.explanation.replace(numbers[0], String(parseInt(numbers[0]) + i + 1));
+        }
+        examples.push(newExample);
+      }
+    }
+    return examples;
   }
-  return examples;
+  
+  // Last resort fallback - at least provide simple addition problems
+  const fallbackExamples: StructuredExample[] = [];
+  for (let i = 0; i < 3; i++) {
+    const a = level * 5 + i;
+    const b = level * 3 + i + 1;
+    fallbackExamples.push({
+      problem: `${a} + ${b} = ?`,
+      solution: String(a + b),
+      explanation: `Para resolver ${a} + ${b}, sumamos: ${a} + ${b} = ${a + b}`
+      });
+  }
+  return fallbackExamples;
 }
 
 // Get example by difficulty action
@@ -723,7 +770,7 @@ async function validateAndFixExercises(
         expected: operationValidation.expectedOperation,
         actual: operationValidation.actualOperation,
         error: operationValidation.error
-      });
+        });
     }
     
     // Also check number range if we have examples
@@ -736,7 +783,7 @@ async function validateAndFixExercises(
           expectedRange,
           actualRange: rangeValidation.actualRange,
           error: rangeValidation.error
-        });
+          });
       }
     }
     
@@ -750,7 +797,7 @@ async function validateAndFixExercises(
         solution: exercise.solution,
         errors: diagnosis.errors,
         suggestions: diagnosis.suggestions
-      });
+        });
     }
   });
   
@@ -777,7 +824,7 @@ async function validateAndFixExercises(
           topic: card.topic,
           examples: structuredExamples.length > 0 ? undefined : levelExamples,
           structuredExamples: structuredExamples.length > 0 ? structuredExamples : undefined
-        });
+          });
         
         if (replacement.exercises && replacement.exercises.length > 0) {
           const newExercise = replacement.exercises[0];
@@ -789,7 +836,7 @@ async function validateAndFixExercises(
               problem: newExercise.problem,
               solution: newExercise.solution,
               explanation: newExercise.explanation
-            });
+              });
             regenerated = true;
             console.log(`Successfully regenerated exercise at index ${invalidIndex}`);
             break;
@@ -812,7 +859,7 @@ async function validateAndFixExercises(
         problem: `${num1} + ${num2} = ?`,
         solution: (num1 + num2).toString(),
         explanation: `Para resolver ${num1} + ${num2}, sumamos: ${num1} + ${num2} = ${num1 + num2}`
-      });
+        });
     }
   }
   
@@ -850,7 +897,7 @@ export async function generatePracticeSessionAction(card: {
       topic: card.topic,
       examples: currentStructuredExamples.length > 0 ? undefined : currentLevelExamples,
       structuredExamples: currentStructuredExamples.length > 0 ? currentStructuredExamples : undefined
-    });
+      });
 
     // Transform to expected format and validate
     const { validateMathAnswer } = await import('@/lib/math-validator');
@@ -869,7 +916,7 @@ export async function generatePracticeSessionAction(card: {
         solution: ex.solution,
         explanation: ex.explanation
       };
-    });
+      });
 
     // Generate more if needed
     while (exercises.length < card.exerciseCount) {
@@ -878,7 +925,7 @@ export async function generatePracticeSessionAction(card: {
         topic: card.topic,
         examples: currentStructuredExamples.length > 0 ? undefined : currentLevelExamples,
         structuredExamples: currentStructuredExamples.length > 0 ? currentStructuredExamples : undefined
-      });
+        });
       
       for (const ex of additionalResult.exercises) {
         if (exercises.length < card.exerciseCount) {
@@ -887,7 +934,7 @@ export async function generatePracticeSessionAction(card: {
             problem: ex.problem,
             solution: ex.solution,
             explanation: ex.explanation
-          });
+            });
         }
       }
     }
@@ -905,7 +952,7 @@ export async function generatePracticeSessionAction(card: {
       stack: error instanceof Error ? error.stack : undefined,
       topic: card.topic,
       difficulty: card.difficulty
-    });
+      });
     
     // Fallback to mock data when API fails
     console.warn(`Using mock exercises for topic: ${card.topic}`);
@@ -978,7 +1025,7 @@ function generateMockPracticeSession(card: {
       problem,
       solution,
       explanation
-    });
+      });
   }
   
   return exercises;
@@ -1066,7 +1113,7 @@ export async function generateSingleExerciseAction(card: {
     const result = await generatePersonalizedExercises({
       level: card.difficulty <= 3 ? 'beginner' : card.difficulty <= 6 ? 'intermediate' : 'advanced',
       topic: card.topic
-    });
+      });
 
     if (result.exercises.length > 0) {
       const exercise = result.exercises[0];

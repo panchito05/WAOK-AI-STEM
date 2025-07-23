@@ -75,7 +75,7 @@ const BASE_STORAGE_KEY = 'mathminds_practice_cards';
 const getStorageKey = () => getCurrentProfileStorageKey(BASE_STORAGE_KEY);
 
 // Función para calcular la solución de un problema matemático simple
-function calculateSolution(problem: string): string {
+export function calculateSolution(problem: string): string {
   try {
     // Intentar extraer números y operación de problemas simples
     // Patterns como: "45 + 90 = ?", "35 + 105 = ?", etc.

@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "Firebase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@gannonh/firebase-mcp"
+      ],
+      "env": {
+        "FIREBASE_STORAGE_BUCKET": "math-w-a-o-k.firebasestorage.app",
+        "SERVICE_ACCOUNT_KEY_PATH": "C:\\Users\\wilbe\\Desktop\\Trae AI WAOK-Schedule\\math-w-a-o-k-firebase-adminsdk-fbsvc-0c83ea944b.json"
+      }
+    },
+    "supabase": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "sbp_a6a3d2885a76b5a8b5a8ff72821a19f9d4380b8c"
+      ]
+    }
+  }
+}

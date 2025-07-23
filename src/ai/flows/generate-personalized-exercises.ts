@@ -134,10 +134,43 @@ const generatePersonalizedExercisesFlow = ai.defineFlow(
         throw new Error('AI returned invalid structure');
       }
       
-      // Validate each exercise
-      const validExercises = output.exercises.filter(ex => 
-        ex && ex.problem && ex.solution && ex.explanation
-      );
+      // Validate each exercise with enhanced placeholder detection
+      const isValidExercise = (ex: any): boolean => {
+        // Basic structure validation
+        if (!ex || !ex.problem || !ex.solution || !ex.explanation) {
+          return false;
+        }
+        
+        // Detect common placeholder patterns
+        const placeholderPatterns = [
+          /Ejercicio \d+/i,
+          /Respuesta \d+/i,
+          /Nivel \d+ - Ejercicio/i,
+          /Ejemplo \d+/i,
+          /Solución \d+/i,
+          /problema \d+$/i,
+          /^Ejercicio$/i,
+          /^Respuesta$/i
+        ];
+        
+        // Check if any field contains placeholder patterns
+        const hasPlaceholder = placeholderPatterns.some(pattern => 
+          pattern.test(ex.problem) || 
+          pattern.test(ex.solution) || 
+          pattern.test(ex.explanation)
+        );
+        
+        // Ensure solution is a valid answer (not a placeholder)
+        const hasValidSolution = ex.solution && 
+          ex.solution.length > 0 && 
+          !ex.solution.toLowerCase().includes('respuesta') &&
+          !ex.solution.toLowerCase().includes('solución') &&
+          !ex.solution.toLowerCase().includes('ver solución');
+        
+        return !hasPlaceholder && hasValidSolution;
+      };
+      
+      const validExercises = output.exercises.filter(isValidExercise);
       
       if (validExercises.length === 0) {
         console.error('[Genkit] No valid exercises in output:', output.exercises);
