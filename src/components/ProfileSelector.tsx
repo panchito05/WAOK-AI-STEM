@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, Plus, Settings, Check } from 'lucide-react';
 import { useProfile } from '@/contexts/ProfileContext';
 import {
@@ -20,6 +20,11 @@ export default function ProfileSelector() {
   const [showManagementDialog, setShowManagementDialog] = useState(false);
   const [managementMode, setManagementMode] = useState<'create' | 'edit'>('create');
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleCreateProfile = () => {
     setManagementMode('create');
@@ -49,13 +54,24 @@ export default function ProfileSelector() {
     await switchProfile(profileId);
   };
 
-  if (isLoading) {
+  // Show consistent loading state during SSR and initial mount
+  if (!mounted || isLoading) {
     return (
-      <Button variant="outline" size="sm" disabled className="w-[180px]">
+      <Button 
+        variant="outline" 
+        size="sm" 
+        disabled 
+        className="w-[180px] justify-between font-normal"
+      >
         <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-full bg-muted animate-pulse" />
+          <Avatar className="h-7 w-7">
+            <AvatarFallback className="text-sm bg-muted">
+              <span className="text-xs">...</span>
+            </AvatarFallback>
+          </Avatar>
           <span className="text-sm">Cargando...</span>
         </div>
+        <ChevronDown className="h-4 w-4 opacity-50" />
       </Button>
     );
   }

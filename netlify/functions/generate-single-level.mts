@@ -25,7 +25,7 @@ export default async (req: Request, context: Context) => {
   }
 
   try {
-    const { topic, level } = await req.json();
+    const { topic, level, customInstructions } = await req.json();
 
     if (!topic || !level) {
       return new Response(JSON.stringify({ error: "Missing topic or level" }), {
@@ -37,7 +37,7 @@ export default async (req: Request, context: Context) => {
       });
     }
 
-    const result = await generateExamplesForSingleLevelAction(topic, level);
+    const result = await generateExamplesForSingleLevelAction(topic, level, customInstructions);
 
     return new Response(JSON.stringify(result), {
       status: 200,

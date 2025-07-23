@@ -3,7 +3,7 @@ import { generateExamplesForSingleLevelAction } from '@/app/actions';
 
 export async function POST(request: NextRequest) {
   try {
-    const { topic, level } = await request.json();
+    const { topic, level, customInstructions } = await request.json();
 
     if (!topic || !level) {
       return NextResponse.json(
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await generateExamplesForSingleLevelAction(topic, level);
+    const result = await generateExamplesForSingleLevelAction(topic, level, customInstructions);
 
     return NextResponse.json(result);
   } catch (error) {

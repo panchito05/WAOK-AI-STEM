@@ -334,6 +334,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
 
   const handleRegenerateExamples = async (level: number) => {
     const currentTopic = correctedTopic || topic;
+    const currentInstructions = form.getValues('customInstructions');
     
     if (!currentTopic || currentTopic.length < 3) {
       toast({
@@ -347,7 +348,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
     setRegeneratingLevel(level);
     
     try {
-      const result = await api.generateExamplesForSingleLevel(currentTopic, level);
+      const result = await api.generateExamplesForSingleLevel(currentTopic, level, currentInstructions);
       
       if (result.error) {
         throw new Error(result.error);

@@ -676,9 +676,12 @@ function getMockExamplesForLevel(topic: string, level: number): StructuredExampl
 }
 
 // Generate examples for a single level
-export async function generateExamplesForSingleLevelAction(topic: string, level: number) {
+export async function generateExamplesForSingleLevelAction(topic: string, level: number, customInstructions?: string) {
   try {
     console.log(`Generating examples for level ${level} and topic "${topic}"...`);
+    if (customInstructions) {
+      console.log(`With custom instructions: ${customInstructions}`);
+    }
     
     // Map level to difficulty string
     const levelToDifficulty = (level: number): string => {
@@ -691,7 +694,8 @@ export async function generateExamplesForSingleLevelAction(topic: string, level:
     const result = await generatePersonalizedExercises({
       level: levelToDifficulty(level),
       topic: topic,
-      structuredExamples: getBaseExamplesForLevel(topic, level)
+      structuredExamples: getBaseExamplesForLevel(topic, level),
+      customInstructions: customInstructions
     });
     
     let examples: StructuredExample[] = [];

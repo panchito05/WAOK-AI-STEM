@@ -39,7 +39,9 @@ export default async (req: Request, context: Context) => {
     console.log('[generate-practice] Request data:', {
       topic: card.topic,
       difficulty: card.difficulty,
-      exerciseCount: card.exerciseCount
+      exerciseCount: card.exerciseCount,
+      hasCustomInstructions: !!card.customInstructions,
+      customInstructions: card.customInstructions
     });
     const validatedData = generatePracticeSchema.safeParse(card);
 
@@ -63,7 +65,8 @@ export default async (req: Request, context: Context) => {
       level: validatedCard.difficulty <= 3 ? 'beginner' : validatedCard.difficulty <= 6 ? 'intermediate' : 'advanced',
       topic: validatedCard.topic,
       examples: currentStructuredExamples.length > 0 ? undefined : currentLevelExamples,
-      structuredExamples: currentStructuredExamples.length > 0 ? currentStructuredExamples : undefined
+      structuredExamples: currentStructuredExamples.length > 0 ? currentStructuredExamples : undefined,
+      customInstructions: validatedCard.customInstructions
     });
 
     // Transform to expected format
@@ -80,7 +83,8 @@ export default async (req: Request, context: Context) => {
         level: validatedCard.difficulty <= 3 ? 'beginner' : validatedCard.difficulty <= 6 ? 'intermediate' : 'advanced',
         topic: validatedCard.topic,
         examples: currentStructuredExamples.length > 0 ? undefined : currentLevelExamples,
-        structuredExamples: currentStructuredExamples.length > 0 ? currentStructuredExamples : undefined
+        structuredExamples: currentStructuredExamples.length > 0 ? currentStructuredExamples : undefined,
+        customInstructions: validatedCard.customInstructions
       });
       
       for (const ex of additionalResult.exercises) {

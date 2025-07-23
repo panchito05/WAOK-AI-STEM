@@ -22,6 +22,7 @@ const GeneratePersonalizedExercisesInputSchema = z.object({
     solution: z.string(),
     explanation: z.string()
   })).optional().describe('Structured examples with complete problem, solution, and explanation.'),
+  customInstructions: z.string().optional().describe('Custom instructions for exercise generation format and style.'),
 });
 export type GeneratePersonalizedExercisesInput = z.infer<
   typeof GeneratePersonalizedExercisesInputSchema
@@ -48,6 +49,8 @@ export async function generatePersonalizedExercises(
     topic: input.topic,
     hasExamples: !!input.examples,
     hasStructuredExamples: !!input.structuredExamples,
+    hasCustomInstructions: !!input.customInstructions,
+    customInstructions: input.customInstructions,
     timestamp: new Date().toISOString()
   });
   
@@ -92,6 +95,13 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   - If the topic is "Resta" or contains "subtraction", ALL exercises MUST use subtraction (-)
   - If the topic is "Suma" or contains "addition", ALL exercises MUST use addition (+)
   - NEVER mix operations - ALL 5 exercises must use the SAME operation
+
+  {{#if customInstructions}}
+  **CUSTOM INSTRUCTIONS FROM USER:**
+  {{{customInstructions}}}
+  
+  You MUST follow these custom instructions for formatting and presenting the exercises.
+  {{/if}}
 
   {{#if structuredExamples}}
   **MANDATORY: You MUST follow these examples EXACTLY:**
