@@ -1,4 +1,5 @@
 import type {Metadata} from 'next';
+import { Suspense } from 'react';
 import './globals.css';
 import ClientLayout from '@/components/ClientLayout'
 
@@ -21,7 +22,24 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <ClientLayout>
-          {children}
+          <Suspense fallback={
+            <div className="flex min-h-screen w-full flex-col">
+              <div className="animate-pulse">
+                <div className="h-16 bg-gray-200 mb-4"></div>
+                <div className="p-4 md:p-8">
+                  <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-48 bg-gray-200 rounded"></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          }>
+            {children}
+          </Suspense>
         </ClientLayout>
       </body>
     </html>

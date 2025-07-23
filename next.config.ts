@@ -2,6 +2,11 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  experimental: {
+    // Disable problematic features that can cause workStore issues
+    serverComponentsExternalPackages: ['genkit', '@genkit-ai/core'],
+    optimizePackageImports: ['lucide-react'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -24,6 +29,15 @@ const nextConfig: NextConfig = {
       handlebars: 'handlebars',
       dotprompt: 'dotprompt'
     }];
+    
+    // Additional webpack optimizations to prevent workStore issues
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+    
     return config;
   },
 };
