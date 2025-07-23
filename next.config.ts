@@ -19,7 +19,11 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config) => {
-    config.externals = [...(config.externals || []), { canvas: 'canvas' }];
+    config.externals = [...(config.externals || []), { 
+      canvas: 'canvas',
+      handlebars: 'handlebars',
+      dotprompt: 'dotprompt'
+    }];
     return config;
   },
 };
