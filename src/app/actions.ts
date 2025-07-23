@@ -675,6 +675,52 @@ function getMockExamplesForLevel(topic: string, level: number): StructuredExampl
   return fallbackExamples;
 }
 
+// Generate examples for a single level
+export async function generateExamplesForSingleLevelAction(topic: string, level: number) {
+  try {
+    console.log(`Generating examples for level ${level} and topic "${topic}"...`);
+    
+    // Map level to difficulty string
+    const levelToDifficulty = (level: number): string => {
+      if (level <= 3) return 'beginner';
+      if (level <= 6) return 'intermediate';
+      return 'advanced';
+    };
+    
+    // Generate 3 varied examples for this specific level
+    const result = await generatePersonalizedExercises({
+      level: levelToDifficulty(level),
+      topic: topic,
+      structuredExamples: getBaseExamplesForLevel(topic, level)
+    });
+    
+    let examples: StructuredExample[] = [];
+    
+    if (result.exercises && result.exercises.length >= 3) {
+      // Take first 3 exercises and ensure variety
+      examples = result.exercises.slice(0, 3).map((ex, index) => {
+        // Add variety to exercise format based on index
+        const variedProblem = varyProblemFormat(ex.problem, index, level);
+        return {
+          problem: variedProblem,
+          solution: ex.solution,
+          explanation: ex.explanation
+        };
+      });
+    } else {
+      // Fallback to mock examples if generation fails
+      examples = getMockExamplesForLevel(topic, level);
+    }
+    
+    return { data: { [level]: examples } };
+  } catch (error) {
+    console.error(`Error generating examples for level ${level}:`, error);
+    // Use mock examples as fallback
+    const mockExamples = getMockExamplesForLevel(topic, level);
+    return { data: { [level]: mockExamples } };
+  }
+}
+
 // Get example by difficulty action
 export async function getExampleByDifficultyAction(topic: string, difficulty: number) {
   try {

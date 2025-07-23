@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { solveVisuallyAction } from '@/app/actions';
+import { api } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 
 export default function VisualSolver() {
@@ -59,7 +59,7 @@ export default function VisualSolver() {
       reader.readAsDataURL(imageFile);
       reader.onload = async () => {
         const photoDataUri = reader.result as string;
-        const result = await solveVisuallyAction(photoDataUri);
+        const result = await api.solveVisually(photoDataUri);
 
         if (result.error) {
           toast({

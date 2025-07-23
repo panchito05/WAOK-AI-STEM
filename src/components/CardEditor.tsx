@@ -33,7 +33,9 @@ import {
   Pencil,
   Trash2
 } from 'lucide-react';
-import { correctSpellingWithAIAction, generateExamplesForAllLevelsAction } from '@/app/actions';
+import { api } from '@/lib/api-client';
+// Note: generateExamplesForAllLevelsAction is not available in the API client yet
+import { generateExamplesForAllLevelsAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { exerciseCache } from '@/lib/exercise-cache';
 import LevelExamplesDialog from '@/components/LevelExamplesDialog';
@@ -88,6 +90,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const [generatingExamples, setGeneratingExamples] = useState(false);
   const [generationProgress, setGenerationProgress] = useState('');
   const [lastGeneratedTopic, setLastGeneratedTopic] = useState<string>('');
+  const [regeneratingLevel, setRegeneratingLevel] = useState<number | null>(null);
 
   // Initialize color and icon from existing card
   useEffect(() => {
@@ -119,7 +122,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       if (topic && topic.length > 2) {
         setCheckingSpelling(true);
         try {
-          const result = await correctSpellingWithAIAction(topic);
+          const result = await api.correctSpelling(topic, true); // useAI = true
           if (result.data) {
             const { correctedText, color, icon } = result.data;
             if (correctedText !== topic) {
@@ -146,7 +149,9 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
     return () => clearTimeout(timer);
   }, [topic]);
 
-  // Generate examples automatically when topic changes
+  // Generate examples automatically when topic changes - DISABLED
+  // Now users must manually regenerate examples for each level
+  /*
   useEffect(() => {
     // Use corrected topic if available, otherwise use raw topic
     const currentTopic = correctedTopic || topic;
@@ -188,6 +193,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       return () => clearTimeout(timer);
     }
   }, [topic, correctedTopic, lastGeneratedTopic, generatingExamples, toast]);
+  */
 
 
   const onSubmit = async (values: FormValues) => {
@@ -202,7 +208,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       
       if (!finalColor || !finalIcon) {
         // Get color and icon for the current topic
-        const result = await correctSpellingWithAIAction(values.topic);
+        const result = await api.correctSpelling(values.topic, true); // useAI = true
         if (result.data) {
           finalColor = result.data.color || '';
           finalIcon = result.data.icon || '';
@@ -326,6 +332,50 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
     }, 100);
   };
 
+  const handleRegenerateExamples = async (level: number) => {
+    const currentTopic = correctedTopic || topic;
+    
+    if (!currentTopic || currentTopic.length < 3) {
+      toast({
+        title: 'Error',
+        description: 'Por favor, ingresa un tema válido primero',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setRegeneratingLevel(level);
+    
+    try {
+      const result = await api.generateExamplesForSingleLevel(currentTopic, level);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      if (result.data) {
+        setStructuredExamples(prev => ({
+          ...prev,
+          [level]: result.data[level]
+        }));
+        toast({
+          title: 'Ejemplos regenerados',
+          description: `Se regeneraron los ejemplos del nivel ${level}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error regenerating examples:', error);
+      const errorMessage = error instanceof Error ? error.message : 'No se pudieron regenerar los ejemplos';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setRegeneratingLevel(null);
+    }
+  };
+
   const getDifficultyLabel = (value: number) => {
     if (value <= 3) return 'Fácil';
     if (value <= 6) return 'Intermedio';
@@ -429,15 +479,31 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
 
             {/* Example Problem Preview */}
             <div className="rounded-lg border bg-muted/50 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Ejemplos del nivel {difficulty}:</span>
-                {generatingExamples && (
-                  <div className="flex items-center gap-2 ml-auto">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span className="text-xs text-muted-foreground">{generationProgress}</span>
-                  </div>
-                )}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Ejemplos del nivel {difficulty}:</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRegenerateExamples(difficulty)}
+                  disabled={regeneratingLevel === difficulty || !topic || topic.length < 3}
+                  className="h-8 px-3"
+                >
+                  {regeneratingLevel === difficulty ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Regenerando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Regenerar ejemplo
+                    </>
+                  )}
+                </Button>
               </div>
               {structuredExamples[difficulty]?.length > 0 ? (
                 <div className="space-y-3">

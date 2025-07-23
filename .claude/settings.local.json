@@ -2,8 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(pkill:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "mcp__netlify__netlify-coding-rules",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(claude config get)",
+      "Bash(claude mcp:*)",
+      "Bash(npm run lint)",
+      "Bash(cd:*)"
     ],
     "deny": []
-  }
+  },
+  "enableAllProjectMcpServers": true
 }

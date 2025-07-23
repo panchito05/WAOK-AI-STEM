@@ -43,7 +43,26 @@ export type GeneratePersonalizedExercisesOutput = z.infer<
 export async function generatePersonalizedExercises(
   input: GeneratePersonalizedExercisesInput
 ): Promise<GeneratePersonalizedExercisesOutput> {
-  return generatePersonalizedExercisesFlow(input);
+  console.log('[generatePersonalizedExercises] Called with:', {
+    level: input.level,
+    topic: input.topic,
+    hasExamples: !!input.examples,
+    hasStructuredExamples: !!input.structuredExamples,
+    timestamp: new Date().toISOString()
+  });
+  
+  try {
+    const result = await generatePersonalizedExercisesFlow(input);
+    console.log('[generatePersonalizedExercises] Success, generated exercises:', result.exercises.length);
+    return result;
+  } catch (error) {
+    console.error('[generatePersonalizedExercises] Error in flow:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      type: error?.constructor?.name,
+      hasApiKey: !!process.env.GEMINI_API_KEY || (typeof Netlify !== 'undefined' && !!Netlify?.env?.get('GEMINI_API_KEY'))
+    });
+    throw error;
+  }
 }
 
 const generatePersonalizedExercisesPrompt = ai.definePrompt({

@@ -2,6 +2,8 @@
 
 MathMinds is an AI-powered math tutoring application for children built with Next.js 15, TypeScript, and Google Genkit AI integration.
 
+🌐 **Live Demo**: https://mathminds-app.netlify.app
+
 ## Prerequisites
 
 - Node.js 18+ 
@@ -84,3 +86,10 @@ If Next.js prompts to install TypeScript:
 - `/src/ai` - Genkit AI flows and configuration
 - `/src/hooks` - Custom React hooks
 - `/docs` - Project documentation
+- `/netlify/functions` - Netlify serverless functions
+
+## Deployment
+
+This app is deployed on Netlify. For deployment instructions, see:
+- [NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md) - Complete deployment guide
+- [CLAUDE.md](./CLAUDE.md) - AI assistant instructions including deployment info

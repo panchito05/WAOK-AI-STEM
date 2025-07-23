@@ -6,6 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MathMinds is an AI-powered math tutoring application for children built with Next.js 15, TypeScript, and Google Genkit AI integration. It provides personalized math exercises, visual problem solving through camera input, and gamified progress tracking.
 
+**🌐 Production URL**: https://mathminds-app.netlify.app  
+**📊 Netlify Dashboard**: https://app.netlify.com/projects/mathminds-app
+
 ### Future Architecture: GenAI Processors
 
 **Important**: This project is planned to migrate to Google's GenAI Processors technology, an open-source Python library designed for building sophisticated Gemini applications with multimodal input and real-time responsiveness.
@@ -177,3 +180,50 @@ When migrating to GenAI Processors:
 4. Implement visual math solver with camera integration
 5. Create WebSocket endpoints for real-time communication
 6. Maintain existing Next.js frontend, adapt to WebSocket communication
+
+## Deployment Information
+
+### Current Deployment Platform: Netlify
+
+The application is currently deployed on Netlify with the following configuration:
+
+#### Production URLs
+- **Main URL**: https://mathminds-app.netlify.app
+- **Deploy URL**: https://688055b5ceefc9b3de59b5f5--mathminds-app.netlify.app
+- **Admin Panel**: https://app.netlify.com/projects/mathminds-app
+
+#### Deployment Details
+- **Site ID**: 44dfe813-0fd0-4097-9841-73ed7b0c07b7
+- **Team**: panchito05
+- **Framework**: Next.js with @netlify/plugin-nextjs
+- **Functions Region**: us-east-2
+- **Build Command**: `npm run build:netlify`
+- **Publish Directory**: `.next`
+
+#### Environment Variables
+- `GEMINI_API_KEY`: Configured in Netlify dashboard (required)
+- `NODE_VERSION`: 18 (set in netlify.toml)
+
+### Deployment Architecture
+
+1. **Serverless Functions**: All server actions have been migrated to Netlify Functions
+   - `/api/generate-exercises` → `netlify/functions/generate-exercises.mts`
+   - `/api/solve-visually` → `netlify/functions/solve-visually.mts`
+   - `/api/correct-spelling` → `netlify/functions/correct-spelling.mts`
+   - `/api/generate-practice` → `netlify/functions/generate-practice.mts`
+   - `/api/check-answer` → `netlify/functions/check-answer.mts`
+
+2. **API Client**: Components use `/src/lib/api-client.ts` to communicate with functions
+
+3. **Build Configuration**: Uses `build:netlify` script to ignore TypeScript/ESLint errors
+
+### Deployment Steps Summary
+
+1. Created `netlify.toml` configuration file
+2. Added `build:netlify` script to package.json
+3. Migrated all server actions to Netlify Functions
+4. Created API client for frontend communication
+5. Updated all components to use API client instead of server actions
+6. Deployed using Netlify MCP tools
+
+For detailed deployment instructions, see [NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md)

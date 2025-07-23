@@ -31,7 +31,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { generateExercisesAction } from '@/app/actions';
+import { api } from '@/lib/api-client';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Skeleton } from './ui/skeleton';
@@ -69,7 +69,10 @@ export default function PracticeExercises() {
     formData.append('level', values.level);
     formData.append('topic', values.topic);
 
-    const result = await generateExercisesAction(formData);
+    const result = await api.generateExercises({
+      level: values.level,
+      topic: values.topic
+    });
 
     if (result.error) {
       toast({

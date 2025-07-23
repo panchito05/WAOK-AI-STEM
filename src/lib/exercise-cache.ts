@@ -1,5 +1,5 @@
 // Exercise caching system for instant practice sessions
-import { generatePracticeSessionAction } from '@/app/actions';
+import { api } from '@/lib/api-client';
 import { getCurrentProfileStorageKey } from './profiles';
 
 export interface Exercise {
@@ -282,7 +282,7 @@ export const exerciseCache = {
       console.log(`Preloading exercises for card ${card.id}...`);
       
       // Generate initial pool of exercises
-      const result = await generatePracticeSessionAction({
+      const result = await api.generatePracticeSession({
         topic: card.topic,
         difficulty: card.difficulty,
         customInstructions: card.customInstructions,
@@ -345,7 +345,7 @@ export const exerciseCache = {
           generating: batchSize
         });
         
-        const result = await generatePracticeSessionAction({
+        const result = await api.generatePracticeSession({
           topic: card.topic,
           difficulty: card.difficulty,
           customInstructions: card.customInstructions,
@@ -434,7 +434,7 @@ export const exerciseCache = {
     console.log(`Generating exercises synchronously for card ${card.id}...`);
     
     try {
-      const result = await generatePracticeSessionAction({
+      const result = await api.generatePracticeSession({
         topic: card.topic,
         difficulty: card.difficulty,
         customInstructions: card.customInstructions,
