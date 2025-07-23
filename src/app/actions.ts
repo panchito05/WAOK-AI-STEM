@@ -322,7 +322,7 @@ export async function correctSpellingWithAIAction(text: string) {
 }
 
 // Generate examples for all levels (1-10) for a given topic
-export async function generateExamplesForAllLevelsAction(topic: string) {
+export async function generateExamplesForAllLevelsAction(topic: string, customInstructions?: string) {
   try {
     const allExamples: { [level: number]: StructuredExample[] } = {};
     
@@ -342,7 +342,8 @@ export async function generateExamplesForAllLevelsAction(topic: string) {
         const result = await generatePersonalizedExercises({
           level: levelToDifficulty(level),
           topic: topic,
-          structuredExamples: getBaseExamplesForLevel(topic, level)
+          structuredExamples: getBaseExamplesForLevel(topic, level),
+          customInstructions: customInstructions
           });
         
         if (result.exercises && result.exercises.length >= 3) {

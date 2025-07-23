@@ -91,6 +91,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const [generationProgress, setGenerationProgress] = useState('');
   const [lastGeneratedTopic, setLastGeneratedTopic] = useState<string>('');
   const [regeneratingLevel, setRegeneratingLevel] = useState<number | null>(null);
+  const [regeneratingAllLevels, setRegeneratingAllLevels] = useState(false);
 
   // Initialize color and icon from existing card
   useEffect(() => {
@@ -149,14 +150,13 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
     return () => clearTimeout(timer);
   }, [topic]);
 
-  // Generate examples automatically when topic changes - DISABLED
-  // Now users must manually regenerate examples for each level
-  /*
+  // Generate examples automatically when topic changes - ONLY FOR NEW CARDS
   useEffect(() => {
     // Use corrected topic if available, otherwise use raw topic
     const currentTopic = correctedTopic || topic;
     
     const shouldGenerateExamples = 
+      !card && // Only for new cards
       currentTopic && // Topic is set
       currentTopic.length > 2 && // Topic is valid
       currentTopic !== lastGeneratedTopic && // Topic has changed
@@ -168,13 +168,13 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
         setGenerationProgress('Generando ejemplos para todos los niveles...');
         
         try {
-          const result = await generateExamplesForAllLevelsAction(currentTopic);
+          const result = await generateExamplesForAllLevelsAction(currentTopic, form.getValues('customInstructions'));
           if (result.data) {
             setStructuredExamples(result.data);
             setLastGeneratedTopic(currentTopic); // Track the topic we generated for
             toast({
-              title: 'Ejemplos actualizados',
-              description: `Se generaron ejemplos para "${currentTopic}"`,
+              title: 'Ejemplos generados',
+              description: `Se generaron ejemplos para todos los niveles de "${currentTopic}"`,
             });
           }
         } catch (error) {
@@ -192,8 +192,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
 
       return () => clearTimeout(timer);
     }
-  }, [topic, correctedTopic, lastGeneratedTopic, generatingExamples, toast]);
-  */
+  }, [card, topic, correctedTopic, lastGeneratedTopic, generatingExamples, toast, form]);
 
 
   const onSubmit = async (values: FormValues) => {
@@ -354,7 +353,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
         throw new Error(result.error);
       }
       
-      if (result.data) {
+      if (result.data && result.data[level]) {
         setStructuredExamples(prev => ({
           ...prev,
           [level]: result.data[level]
@@ -374,6 +373,49 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       });
     } finally {
       setRegeneratingLevel(null);
+    }
+  };
+
+  const handleRegenerateAllLevels = async () => {
+    const currentTopic = correctedTopic || topic;
+    const currentInstructions = form.getValues('customInstructions');
+    
+    if (!currentTopic || currentTopic.length < 3) {
+      toast({
+        title: 'Error',
+        description: 'Por favor, ingresa un tema válido primero',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setRegeneratingAllLevels(true);
+    
+    try {
+      const result = await generateExamplesForAllLevelsAction(currentTopic, currentInstructions);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      if (result.data) {
+        setStructuredExamples(result.data);
+        setLastGeneratedTopic(currentTopic);
+        toast({
+          title: 'Ejemplos regenerados',
+          description: 'Se regeneraron los ejemplos de todos los niveles',
+        });
+      }
+    } catch (error) {
+      console.error('Error regenerating all examples:', error);
+      const errorMessage = error instanceof Error ? error.message : 'No se pudieron regenerar los ejemplos';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setRegeneratingAllLevels(false);
     }
   };
 
@@ -485,26 +527,42 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">Ejemplos del nivel {difficulty}:</span>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleRegenerateExamples(difficulty)}
-                  disabled={regeneratingLevel === difficulty || !topic || topic.length < 3}
-                  className="h-8 px-3"
-                >
-                  {regeneratingLevel === difficulty ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Regenerando...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Regenerar ejemplo
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegenerateAllLevels}
+                    disabled={regeneratingAllLevels || !topic || topic.length < 3}
+                    className="h-8 px-2"
+                  >
+                    {regeneratingAllLevels ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-1" />
+                        Todos
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateExamples(difficulty)}
+                    disabled={regeneratingLevel === difficulty || !topic || topic.length < 3}
+                    className="h-8 px-2"
+                  >
+                    {regeneratingLevel === difficulty ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-1" />
+                        Solo este nivel
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
               {structuredExamples[difficulty]?.length > 0 ? (
                 <div className="space-y-3">
