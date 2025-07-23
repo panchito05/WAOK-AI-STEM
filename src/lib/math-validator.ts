@@ -27,6 +27,10 @@ export function validateExerciseFormat(problem: string): { valid: boolean; error
   
   // Check for valid patterns (more flexible to accept AI-generated formats)
   const validPatterns = [
+    // Conversion exercises - MUST BE FIRST to prioritize
+    /^(decimal|fracción|porcentaje|razón)\s+[\d./,%:\s]+\s*(a|to|en|como)\s*(decimal|fracción|porcentaje|razón)?/i,
+    // Accept conversion without ending type
+    /^(decimal|fracción|porcentaje|razón)\s+[\d./,%:\s]+\s+a\s*/i,
     // Standard format: "2 + 3 = ?" (now accepts fractions and decimals, with flexible spacing)
     new RegExp(`^${numberPattern}\\s*[+\\-×x\\*÷/]\\s*${numberPattern}\\s*=\\s*\\?$`),
     // Missing number format: "2 + ? = 5"
@@ -347,19 +351,31 @@ export function validateOperationType(
     addition: /\d+\s*\+\s*\d+|^\??\s*\+\s*\d+|\d+\s*\+\s*\??/,
     subtraction: /\d+\s*-\s*\d+|^\??\s*-\s*\d+|\d+\s*-\s*\??/,
     multiplication: /\d+\s*[×x\*]\s*\d+|^\??\s*[×x\*]\s*\d+|\d+\s*[×x\*]\s*\??/,
-    division: /\d+\s*[÷/]\s*\d+|^\??\s*[÷/]\s*\d+|\d+\s*[÷/]\s*\??/
+    division: /\d+\s*[÷/]\s*\d+|^\??\s*[÷/]\s*\d+|\d+\s*[÷/]\s*\??/,
+    // More flexible conversion pattern that accepts various formats
+    conversion: /(?:decimal|fracción|porcentaje|razón|fraction|percent|ratio)\s+[\d./,%:\s]+\s*(?:a|to|en|como)\s*(?:decimal|fracción|porcentaje|fraction|percent)?/i
   };
   
   // Detect actual operation in problem
   let actualOperation: string | undefined;
-  if (operationPatterns.addition.test(problem)) actualOperation = 'addition';
+  // Check conversion first as it's more specific
+  if (operationPatterns.conversion.test(problem)) actualOperation = 'conversion';
+  else if (operationPatterns.addition.test(problem)) actualOperation = 'addition';
   else if (operationPatterns.subtraction.test(problem)) actualOperation = 'subtraction';
   else if (operationPatterns.multiplication.test(problem)) actualOperation = 'multiplication';
   else if (operationPatterns.division.test(problem)) actualOperation = 'division';
   
   // Determine expected operation from topic
   let expectedOperation: string | undefined;
-  if (topicLower.includes('suma') || topicLower.includes('adición') || topicLower.includes('addition')) {
+  
+  // Check for conversion topics first (expanded list)
+  const conversionKeywords = ['conversión', 'conversiones', 'fracción', 'fracciones', 
+                              'porcentaje', 'porcentajes', 'decimal', 'decimales', 
+                              'razón', 'razones', 'convert', 'conversion'];
+  
+  if (conversionKeywords.some(keyword => topicLower.includes(keyword))) {
+    expectedOperation = 'conversion';
+  } else if (topicLower.includes('suma') || topicLower.includes('adición') || topicLower.includes('addition')) {
     expectedOperation = 'addition';
   } else if (topicLower.includes('resta') || topicLower.includes('substracción') || topicLower.includes('subtraction')) {
     expectedOperation = 'subtraction';

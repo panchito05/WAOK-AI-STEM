@@ -365,7 +365,13 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       }
     } catch (error) {
       console.error('Error regenerating examples:', error);
-      const errorMessage = error instanceof Error ? error.message : 'No se pudieron regenerar los ejemplos';
+      let errorMessage = error instanceof Error ? error.message : 'No se pudieron regenerar los ejemplos';
+      
+      // Check for quota error and provide helpful message
+      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        errorMessage = 'Se ha alcanzado el límite diario de solicitudes (200). Por favor, intenta nuevamente mañana o configura tu propia API key de Gemini.';
+      }
+      
       toast({
         title: 'Error',
         description: errorMessage,
@@ -408,7 +414,13 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       }
     } catch (error) {
       console.error('Error regenerating all examples:', error);
-      const errorMessage = error instanceof Error ? error.message : 'No se pudieron regenerar los ejemplos';
+      let errorMessage = error instanceof Error ? error.message : 'No se pudieron regenerar los ejemplos';
+      
+      // Check for quota error and provide helpful message
+      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        errorMessage = 'Se ha alcanzado el límite diario de solicitudes (200). Por favor, intenta nuevamente mañana o configura tu propia API key de Gemini.';
+      }
+      
       toast({
         title: 'Error',
         description: errorMessage,

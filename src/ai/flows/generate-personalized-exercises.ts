@@ -54,6 +54,12 @@ export async function generatePersonalizedExercises(
     timestamp: new Date().toISOString()
   });
   
+  // Log topic analysis
+  const topicLower = input.topic.toLowerCase();
+  const isConversionTopic = topicLower.includes('conversión') || topicLower.includes('fracción') || 
+                           topicLower.includes('porcentaje') || topicLower.includes('decimal');
+  console.log(`[generatePersonalizedExercises] Topic analysis: "${input.topic}" - Is conversion topic: ${isConversionTopic}`);
+  
   try {
     const result = await generatePersonalizedExercisesFlow(input);
     console.log('[generatePersonalizedExercises] Success, generated exercises:', result.exercises.length);
@@ -72,29 +78,16 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   name: 'generatePersonalizedExercisesPrompt',
   input: {schema: GeneratePersonalizedExercisesInputSchema},
   output: {schema: GeneratePersonalizedExercisesOutputSchema},
-  prompt: `<thinking>
-  I need to generate 5 mathematical exercises. Let me carefully analyze what's required:
-  - Level: {{{level}}}
-  - Topic: {{{topic}}}
-  {{#if structuredExamples}}
-  - I have structured examples to follow. I must analyze the number range and operation type used in these examples.
-  {{/if}}
+  prompt: `Generate exactly 5 mathematical exercises.
+
+  Topic: {{{topic}}}
+  Level: {{{level}}}
   
-  Let me identify the specific operation required:
-  - If topic contains "suma", "adición", or "addition" → ONLY use addition (+)
-  - If topic contains "resta", "substracción", or "subtraction" → ONLY use subtraction (-)
-  - If topic contains "multiplicación", "producto", or "multiplication" → ONLY use multiplication (× or *)
-  - If topic contains "división" or "division" → ONLY use division (÷ or /)
-  </thinking>
-
-  Generate exactly 5 mathematical exercises for the topic: {{{topic}}}
-
-  **CRITICAL OPERATION RULE:**
-  - Topic is "{{{topic}}}"
-  - You MUST ONLY generate exercises that match this operation type
-  - If the topic is "Resta" or contains "subtraction", ALL exercises MUST use subtraction (-)
-  - If the topic is "Suma" or contains "addition", ALL exercises MUST use addition (+)
-  - NEVER mix operations - ALL 5 exercises must use the SAME operation
+  Requirements:
+  - Create 5 exercises that are appropriate for the given topic and difficulty level
+  - Each exercise must have a clear problem, solution, and step-by-step explanation
+  - All exercises must be related to the specified topic
+  - Solutions must be mathematically correct and complete
 
   {{#if customInstructions}}
   **CUSTOM INSTRUCTIONS FROM USER:**
@@ -134,11 +127,10 @@ const generatePersonalizedExercisesPrompt = ai.definePrompt({
   {{/if}}
 
   {{#unless examples}}
-  For topic "{{{topic}}}" at {{{level}}} level:
-  - Beginner: numbers 1-10
-  - Intermediate: numbers 10-50  
-  - Advanced: numbers 50-100+
-  - ALL exercises MUST use the operation specified in the topic
+  Difficulty guidelines:
+  - Beginner: Use simple numbers and basic concepts
+  - Intermediate: Use moderate complexity
+  - Advanced: Use complex numbers and advanced concepts
   {{/unless}}
   
   Return JSON with problem, solution, and explanation for each exercise.`,
@@ -151,17 +143,25 @@ const generatePersonalizedExercisesFlow = ai.defineFlow(
     outputSchema: GeneratePersonalizedExercisesOutputSchema,
   },
   async input => {
-    try {
-      const {output} = await generatePersonalizedExercisesPrompt(input);
+    const maxRetries = 1; // Reduced to avoid quota exhaustion
+    let attempts = 0;
+    
+    while (attempts < maxRetries) {
+      attempts++;
+      console.log(`[Genkit] Attempt ${attempts}/${maxRetries} for topic "${input.topic}"`);
       
-      // Log the raw output for debugging
-      console.log('[Genkit] Raw AI output:', JSON.stringify(output, null, 2));
-      
-      // Validate output structure
-      if (!output || !output.exercises || !Array.isArray(output.exercises)) {
-        console.error('[Genkit] Invalid output structure:', output);
-        throw new Error('AI returned invalid structure');
-      }
+      try {
+        const {output} = await generatePersonalizedExercisesPrompt(input);
+        
+        // Log the raw output for debugging
+        console.log('[Genkit] Raw AI output:', JSON.stringify(output, null, 2));
+        
+        // Validate output structure
+        if (!output || !output.exercises || !Array.isArray(output.exercises)) {
+          console.error('[Genkit] Invalid output structure:', output);
+          if (attempts < maxRetries) continue;
+          throw new Error('AI returned invalid structure');
+        }
       
       // Validate each exercise with enhanced placeholder detection
       const isValidExercise = (ex: any): boolean => {
@@ -203,13 +203,43 @@ const generatePersonalizedExercisesFlow = ai.defineFlow(
       
       if (validExercises.length === 0) {
         console.error('[Genkit] No valid exercises in output:', output.exercises);
+        if (attempts < maxRetries) continue;
         throw new Error('No valid exercises generated');
       }
       
-      return { exercises: validExercises };
+      // Validate that exercises match the topic
+      const { validateOperationType } = await import('@/lib/math-validator');
+      console.log(`[Genkit] Validating ${validExercises.length} exercises against topic "${input.topic}"`);
+      
+      const topicValidExercises = validExercises.filter(ex => {
+        const validation = validateOperationType(ex.problem, input.topic);
+        if (!validation.valid && attempts < maxRetries) {
+          console.log(`[Genkit] ❌ Exercise mismatch: "${ex.problem}" - Expected: ${validation.expectedOperation}, Got: ${validation.actualOperation}`);
+          return false;
+        }
+        if (validation.valid) {
+          console.log(`[Genkit] ✅ Valid exercise: "${ex.problem}"`);
+        }
+        return validation.valid;
+      });
+      
+      // Need at least 3 valid exercises that match the topic
+      if (topicValidExercises.length >= 3) {
+        console.log(`[Genkit] Successfully generated ${topicValidExercises.length} valid exercises for topic "${input.topic}" in ${attempts} attempt(s)`);
+        return { exercises: topicValidExercises };
+      }
+      
+      console.log(`[Genkit] Only ${topicValidExercises.length} exercises match topic, need at least 3. Retrying...`);
+      if (attempts < maxRetries) continue;
     } catch (error) {
-      console.error('[Genkit] Error in flow:', error);
-      throw error;
+      console.error('[Genkit] Error in attempt', attempts, ':', error);
+      if (attempts >= maxRetries) {
+        throw new Error(`Failed to generate valid exercises after ${maxRetries} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
+    }
+    
+    // If we get here, all retries failed
+    throw new Error(`Failed to generate valid exercises for topic "${input.topic}" after ${maxRetries} attempts`);
   }
 );

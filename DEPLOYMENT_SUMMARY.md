@@ -52,7 +52,7 @@ Convertidas todas las acciones del servidor a funciones serverless:
 
 ### Variables de Entorno
 ```env
-GEMINI_API_KEY=AIzaSyCzFVqmjQtWqVdyRIY0D7DUO0IhtBFXMd8
+GEMINI_API_KEY=AIzaSyBNpkPnY_ZQmYmDdN4vbeBz4GuLSElFMB0
 NODE_VERSION=18
 ```
 

@@ -50,9 +50,8 @@ export async function generateExercisesAction(formData: FormData) {
     
     // Check if it's an API key error
     if (error instanceof Error && error.message.includes('API key')) {
-      // Return mock data for testing when API key is missing
-      const mockExercises = generateMockExercises(validatedData.data.level, validatedData.data.topic);
-      return { data: mockExercises };
+      // Don't return mock data - fail properly
+      return { error: 'API key is required for generating exercises' };
     }
     
     // For other errors, return detailed message
@@ -61,90 +60,10 @@ export async function generateExercisesAction(formData: FormData) {
   }
 }
 
-// Mock exercise generator for testing without API key
+// Mock exercise generator - returns empty array to force AI generation
 function generateMockExercises(level: string, topic: string) {
-  const exercises = [];
-  const count = 5;
-  
-  // Generate exercises based on topic
-  switch (topic.toLowerCase()) {
-    case 'addition':
-      for (let i = 0; i < count; i++) {
-        const a = level === 'beginner' ? Math.floor(Math.random() * 10) : 
-                 level === 'intermediate' ? Math.floor(Math.random() * 100) : 
-                 Math.floor(Math.random() * 1000);
-        const b = level === 'beginner' ? Math.floor(Math.random() * 10) : 
-                 level === 'intermediate' ? Math.floor(Math.random() * 100) : 
-                 Math.floor(Math.random() * 1000);
-        exercises.push({
-          problem: `${a} + ${b} = ?`,
-          solution: (a + b).toString(),
-          explanation: `${a} + ${b}: ${a} + ${b} = ${a + b}`
-          });
-      }
-      break;
-      
-    case 'subtraction':
-      for (let i = 0; i < count; i++) {
-        const a = level === 'beginner' ? Math.floor(Math.random() * 20) + 10 : 
-                 level === 'intermediate' ? Math.floor(Math.random() * 200) + 50 : 
-                 Math.floor(Math.random() * 2000) + 500;
-        const b = level === 'beginner' ? Math.floor(Math.random() * 10) : 
-                 level === 'intermediate' ? Math.floor(Math.random() * 100) : 
-                 Math.floor(Math.random() * 1000);
-        exercises.push({
-          problem: `${a} - ${b} = ?`,
-          solution: (a - b).toString(),
-          explanation: `${a} - ${b}: ${a} - ${b} = ${a - b}`
-          });
-      }
-      break;
-      
-    case 'multiplication':
-      for (let i = 0; i < count; i++) {
-        const a = level === 'beginner' ? Math.floor(Math.random() * 10) + 1 : 
-                 level === 'intermediate' ? Math.floor(Math.random() * 20) + 1 : 
-                 Math.floor(Math.random() * 100) + 1;
-        const b = level === 'beginner' ? Math.floor(Math.random() * 10) + 1 : 
-                 level === 'intermediate' ? Math.floor(Math.random() * 20) + 1 : 
-                 Math.floor(Math.random() * 100) + 1;
-        exercises.push({
-          problem: `${a} × ${b} = ?`,
-          solution: (a * b).toString(),
-          explanation: `${a} × ${b}: ${a} × ${b} = ${a * b}`
-          });
-      }
-      break;
-      
-    case 'division':
-      for (let i = 0; i < count; i++) {
-        const b = level === 'beginner' ? Math.floor(Math.random() * 9) + 1 : 
-                 level === 'intermediate' ? Math.floor(Math.random() * 20) + 1 : 
-                 Math.floor(Math.random() * 50) + 1;
-        const result = level === 'beginner' ? Math.floor(Math.random() * 10) + 1 : 
-                      level === 'intermediate' ? Math.floor(Math.random() * 20) + 1 : 
-                      Math.floor(Math.random() * 100) + 1;
-        const a = b * result;
-        exercises.push({
-          problem: `${a} ÷ ${b} = ?`,
-          solution: result.toString(),
-          explanation: `${a} ÷ ${b}: ${a} ÷ ${b} = ${result}`
-          });
-      }
-      break;
-      
-    default:
-      // For any other topic, generate placeholder exercises
-      for (let i = 0; i < count; i++) {
-        exercises.push({
-          problem: `Ejercicio ${i + 1} de ${topic}`,
-          solution: "Ver con API key",
-          explanation: `Para ejercicios de "${topic}", active la conexión con Gemini AI para obtener ejercicios específicos y personalizados.`
-          });
-      }
-  }
-  
-  return exercises;
+  console.warn(`[generateMockExercises] Called for topic "${topic}" level "${level}" - returning empty array to force AI generation`);
+  return [];
 }
 
 const solveVisuallySchema = z.object({
@@ -337,6 +256,11 @@ export async function generateExamplesForAllLevelsAction(topic: string, customIn
     for (let level = 1; level <= 10; level++) {
       console.log(`Generating examples for level ${level}...`);
       
+      // Add delay to avoid rate limiting (if not first level)
+      if (level > 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+      }
+      
       try {
         // Generate 3 varied examples for this level
         const result = await generatePersonalizedExercises({
@@ -358,13 +282,25 @@ export async function generateExamplesForAllLevelsAction(topic: string, customIn
             };
             });
         } else {
-          // Fallback to mock examples if generation fails
-          allExamples[level] = getMockExamplesForLevel(topic, level);
+          // Log the issue but don't use incorrect fallback examples
+          console.error(`[generateExamplesForAllLevels] Failed to generate valid exercises for level ${level}, topic "${topic}"`);
+          allExamples[level] = [];
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error generating examples for level ${level}:`, error);
-        // Use mock examples as fallback
-        allExamples[level] = getMockExamplesForLevel(topic, level);
+        
+        // If quota exceeded, stop trying more levels
+        if (error?.message?.includes('429') || error?.message?.includes('quota')) {
+          console.warn('Quota exceeded, stopping generation for remaining levels');
+          // Fill remaining levels with empty arrays
+          for (let remainingLevel = level; remainingLevel <= 10; remainingLevel++) {
+            allExamples[remainingLevel] = [];
+          }
+          break; // Exit the loop
+        }
+        
+        // Don't use mock examples - better to have empty than wrong examples
+        allExamples[level] = [];
       }
     }
     
@@ -377,7 +313,14 @@ export async function generateExamplesForAllLevelsAction(topic: string, customIn
 
 // Helper function to vary problem format
 function varyProblemFormat(baseProblem: string, index: number, level: number): string {
-  // For lower levels, add variety in problem format
+  // Don't modify conversion exercises
+  if (baseProblem.toLowerCase().includes(' a ') || 
+      baseProblem.includes('→') ||
+      baseProblem.match(/(?:decimal|fracción|porcentaje|razón)/i)) {
+    return baseProblem;
+  }
+  
+  // For lower levels, add variety in problem format (only for arithmetic operations)
   if (level <= 3 && index > 0) {
     // Extract numbers from the problem
     const numbers = baseProblem.match(/\d+/g);
@@ -393,287 +336,26 @@ function varyProblemFormat(baseProblem: string, index: number, level: number): s
   return baseProblem;
 }
 
-// Get base examples to guide AI generation
+// Get base examples to guide AI generation - returns empty array to let AI generate everything
 function getBaseExamplesForLevel(topic: string, level: number): StructuredExample[] {
-  const topicLower = topic.toLowerCase();
-  
-  // Define number ranges for each level
-  const ranges = {
-    1: { min: 1, max: 10 },
-    2: { min: 10, max: 20 },
-    3: { min: 20, max: 50 },
-    4: { min: 50, max: 100 },
-    5: { min: 100, max: 500 },
-    6: { min: 500, max: 1000 },
-    7: { min: 0.1, max: 99.9, decimal: true },
-    8: { min: 0.01, max: 999.99, decimal: true },
-    9: { fraction: true },
-    10: { algebraic: true }
-  };
-  
-  const range = ranges[level as keyof typeof ranges];
-  
-  // Generate appropriate examples based on topic and level
-  if (topicLower.includes('suma') || topicLower.includes('adici') || topicLower.includes('addition')) {
-    return generateAdditionExamples(level, range);
-  } else if (topicLower.includes('resta') || topicLower.includes('subtra')) {
-    return generateSubtractionExamples(level, range);
-  } else if (topicLower.includes('multipli')) {
-    return generateMultiplicationExamples(level, range);
-  } else if (topicLower.includes('divis')) {
-    return generateDivisionExamples(level, range);
-  }
-  
-  // Default examples
-  return [
-    {
-      problem: `Ejercicio ${topic} nivel ${level} - Ejemplo 1`,
-      solution: 'Solución 1',
-      explanation: 'Explicación del ejemplo 1'
-    }
-  ];
+  console.log(`[getBaseExamplesForLevel] Called for topic "${topic}" level ${level} - returning empty array to let AI generate`);
+  return [];
 }
 
-// Generate addition examples for different levels
-function generateAdditionExamples(level: number, range: any): StructuredExample[] {
-  const examples: StructuredExample[] = [];
-  
-  // Generate 3 examples for each level
-  for (let i = 0; i < 3; i++) {
-    if (level <= 3) {
-      const a = Math.floor(Math.random() * (range.max - range.min) + range.min);
-      const b = Math.floor(Math.random() * (range.max - range.min) + range.min);
-      examples.push({
-        problem: `${a} + ${b} = ?`,
-        solution: (a + b).toString(),
-        explanation: `Para resolver ${a} + ${b}, sumamos: ${a} + ${b} = ${a + b}`
-        });
-    } else if (level <= 6) {
-      const a = Math.floor(Math.random() * (range.max - range.min) + range.min);
-      const b = Math.floor(Math.random() * (range.max - range.min) + range.min);
-      examples.push({
-        problem: `${a} + ${b} = ?`,
-        solution: (a + b).toString(),
-        explanation: `Sumamos ${a} + ${b} = ${a + b}`
-        });
-    } else if (level <= 8 && range.decimal) {
-      const a = (Math.random() * (range.max - range.min) + range.min).toFixed(2);
-      const b = (Math.random() * (range.max - range.min) + range.min).toFixed(2);
-      examples.push({
-        problem: `${a} + ${b} = ?`,
-        solution: (parseFloat(a) + parseFloat(b)).toFixed(2),
-        explanation: `Suma decimal: ${a} + ${b} = ${(parseFloat(a) + parseFloat(b)).toFixed(2)}`
-        });
-    } else if (level === 9) {
-      // Generate different fraction examples
-      const fractions = [
-        { problem: `1/2 + 1/3 = ?`, solution: `5/6`, explanation: `Para sumar fracciones: 1/2 + 1/3 = 3/6 + 2/6 = 5/6` },
-        { problem: `1/4 + 1/2 = ?`, solution: `3/4`, explanation: `Para sumar fracciones: 1/4 + 1/2 = 1/4 + 2/4 = 3/4` },
-        { problem: `2/3 + 1/6 = ?`, solution: `5/6`, explanation: `Para sumar fracciones: 2/3 + 1/6 = 4/6 + 1/6 = 5/6` }
-      ];
-      examples.push(fractions[i % fractions.length]);
-    } else if (level === 10) {
-      // Generate different advanced examples
-      const advanced = [
-        { problem: `∑(i=1 to 5) i = ?`, solution: `15`, explanation: `La suma de los primeros 5 números naturales: 1+2+3+4+5 = 15` },
-        { problem: `∑(i=1 to 10) i = ?`, solution: `55`, explanation: `La suma de los primeros 10 números naturales: 1+2+...+10 = 55` },
-        { problem: `∑(i=1 to 3) i² = ?`, solution: `14`, explanation: `La suma de los cuadrados: 1² + 2² + 3² = 1 + 4 + 9 = 14` }
-      ];
-      examples.push(advanced[i % advanced.length]);
-    }
-  }
-  
-  return examples;
-}
+// Removed - No hardcoded exercise generation allowed
 
-// Generate subtraction examples for different levels
-function generateSubtractionExamples(level: number, range: any): StructuredExample[] {
-  const examples: StructuredExample[] = [];
-  
-  // Generate 3 examples for each level
-  for (let i = 0; i < 3; i++) {
-    if (level <= 3) {
-      const a = Math.floor(Math.random() * (range.max - range.min) + range.min) + 10;
-      const b = Math.floor(Math.random() * (range.min) + 1);
-      examples.push({
-        problem: `${a} - ${b} = ?`,
-        solution: (a - b).toString(),
-        explanation: `Para resolver ${a} - ${b}, restamos: ${a} - ${b} = ${a - b}`
-        });
-    } else if (level <= 6) {
-      const a = Math.floor(Math.random() * (range.max - range.min) + range.min) + range.min;
-      const b = Math.floor(Math.random() * (range.min) + 1);
-      examples.push({
-        problem: `${a} - ${b} = ?`,
-        solution: (a - b).toString(),
-        explanation: `Restamos ${a} - ${b} = ${a - b}`
-        });
-    } else if (level <= 8 && range.decimal) {
-      const a = (Math.random() * (range.max - range.min) + range.min + 50).toFixed(2);
-      const b = (Math.random() * (range.min) + 1).toFixed(2);
-      examples.push({
-        problem: `${a} - ${b} = ?`,
-        solution: (parseFloat(a) - parseFloat(b)).toFixed(2),
-        explanation: `Resta decimal: ${a} - ${b} = ${(parseFloat(a) - parseFloat(b)).toFixed(2)}`
-        });
-    } else if (level === 9) {
-      examples.push({
-        problem: `3/4 - 1/2 = ?`,
-        solution: `1/4`,
-        explanation: `Para restar fracciones: 3/4 - 1/2 = 3/4 - 2/4 = 1/4`
-        });
-    } else if (level === 10) {
-      examples.push({
-        problem: `\u222B(2x) dx - \u222B(x) dx = ?`,
-        solution: `x\u00B2/2 + C`,
-        explanation: `Resta de integrales: \u222B(2x)dx - \u222B(x)dx = x\u00B2 - x\u00B2/2 = x\u00B2/2 + C`
-        });
-    }
-  }
-  
-  return examples;
-}
+// Removed - No hardcoded exercise generation allowed
 
-// Generate multiplication examples for different levels
-function generateMultiplicationExamples(level: number, range: any): StructuredExample[] {
-  const examples: StructuredExample[] = [];
-  
-  // Generate 3 examples for each level
-  for (let i = 0; i < 3; i++) {
-    if (level <= 3) {
-      const a = Math.floor(Math.random() * 10) + 1;
-      const b = Math.floor(Math.random() * 10) + 1;
-      examples.push({
-      problem: `${a} \u00D7 ${b} = ?`,
-      solution: (a * b).toString(),
-      explanation: `Para resolver ${a} \u00D7 ${b}, multiplicamos: ${a} \u00D7 ${b} = ${a * b}`
-      });
-    } else if (level <= 6) {
-      const a = Math.floor(Math.random() * 25) + 1;
-      const b = Math.floor(Math.random() * 20) + 1;
-      examples.push({
-      problem: `${a} \u00D7 ${b} = ?`,
-      solution: (a * b).toString(),
-      explanation: `Multiplicamos ${a} \u00D7 ${b} = ${a * b}`
-      });
-    } else if (level <= 8 && range.decimal) {
-      const a = (Math.random() * 10 + 1).toFixed(1);
-      const b = (Math.random() * 10 + 1).toFixed(1);
-      examples.push({
-      problem: `${a} \u00D7 ${b} = ?`,
-      solution: (parseFloat(a) * parseFloat(b)).toFixed(2),
-      explanation: `Multiplicaci\u00F3n decimal: ${a} \u00D7 ${b} = ${(parseFloat(a) * parseFloat(b)).toFixed(2)}`
-      });
-    } else if (level === 9) {
-      examples.push({
-      problem: `2/3 \u00D7 3/4 = ?`,
-      solution: `1/2`,
-      explanation: `Para multiplicar fracciones: 2/3 \u00D7 3/4 = (2\u00D73)/(3\u00D74) = 6/12 = 1/2`
-      });
-    } else if (level === 10) {
-      examples.push({
-      problem: `(x + 2)(x - 3) = ?`,
-      solution: `x\u00B2 - x - 6`,
-      explanation: `Multiplicaci\u00F3n de binomios: (x+2)(x-3) = x\u00B2 - 3x + 2x - 6 = x\u00B2 - x - 6`
-      });
-    }
-  }
-  
-  return examples;
-}
+// Removed - No hardcoded exercise generation allowed
 
-// Generate division examples for different levels
-function generateDivisionExamples(level: number, range: any): StructuredExample[] {
-  const examples: StructuredExample[] = [];
-  
-  // Generate 3 examples for each level
-  for (let i = 0; i < 3; i++) {
-    if (level <= 3) {
-      const b = Math.floor(Math.random() * 9) + 1;
-      const result = Math.floor(Math.random() * 10) + 1;
-      const a = b * result;
-      examples.push({
-      problem: `${a} \u00F7 ${b} = ?`,
-      solution: result.toString(),
-      explanation: `Para resolver ${a} \u00F7 ${b}, dividimos: ${a} \u00F7 ${b} = ${result}`
-      });
-    } else if (level <= 6) {
-      const b = Math.floor(Math.random() * 20) + 1;
-      const result = Math.floor(Math.random() * 50) + 1;
-      const a = b * result;
-      examples.push({
-      problem: `${a} \u00F7 ${b} = ?`,
-      solution: result.toString(),
-      explanation: `Dividimos ${a} \u00F7 ${b} = ${result}`
-      });
-    } else if (level <= 8 && range.decimal) {
-      const a = (Math.random() * 100 + 10).toFixed(2);
-      const b = (Math.random() * 10 + 1).toFixed(1);
-      examples.push({
-      problem: `${a} \u00F7 ${b} = ?`,
-      solution: (parseFloat(a) / parseFloat(b)).toFixed(2),
-      explanation: `Divisi\u00F3n decimal: ${a} \u00F7 ${b} = ${(parseFloat(a) / parseFloat(b)).toFixed(2)}`
-      });
-    } else if (level === 9) {
-      examples.push({
-      problem: `3/4 \u00F7 1/2 = ?`,
-      solution: `3/2`,
-      explanation: `Para dividir fracciones: 3/4 \u00F7 1/2 = 3/4 \u00D7 2/1 = 6/4 = 3/2`
-      });
-    } else if (level === 10) {
-      examples.push({
-      problem: `(x\u00B2 + 5x + 6) \u00F7 (x + 2) = ?`,
-      solution: `x + 3`,
-      explanation: `Divisi\u00F3n de polinomios: (x\u00B2+5x+6)\u00F7(x+2) = x+3`
-      });
-    }
-  }
-  
-  return examples;
-}
+// Removed - No hardcoded exercise generation allowed
 
-// Get mock examples for fallback - now generates real exercises
+// Removed - No hardcoded exercise generation allowed
+
+// Get mock examples for fallback - returns empty array to force AI generation
 function getMockExamplesForLevel(topic: string, level: number): StructuredExample[] {
-  // Use the existing base examples generator which creates real math problems
-  const baseExamples = getBaseExamplesForLevel(topic, level);
-  
-  // If we get valid examples, return them
-  if (baseExamples.length > 0 && !baseExamples[0].problem.includes('Ejemplo 1')) {
-    // Generate 3 examples if we only got 1
-    const examples: StructuredExample[] = [];
-    for (let i = 0; i < 3; i++) {
-      if (i < baseExamples.length) {
-        examples.push(baseExamples[i]);
-      } else {
-        // Generate additional examples based on the first one
-        const newExample = { ...baseExamples[0] };
-        // Slightly modify the numbers to create variation
-        if (newExample.problem.match(/\d+/g)) {
-          const numbers = newExample.problem.match(/\d+/g)!;
-          const modifiedProblem = newExample.problem.replace(numbers[0], String(parseInt(numbers[0]) + i + 1));
-          newExample.problem = modifiedProblem;
-          // Recalculate solution
-          newExample.solution = calculateSolution(modifiedProblem);
-          newExample.explanation = newExample.explanation.replace(numbers[0], String(parseInt(numbers[0]) + i + 1));
-        }
-        examples.push(newExample);
-      }
-    }
-    return examples;
-  }
-  
-  // Last resort fallback - at least provide simple addition problems
-  const fallbackExamples: StructuredExample[] = [];
-  for (let i = 0; i < 3; i++) {
-    const a = level * 5 + i;
-    const b = level * 3 + i + 1;
-    fallbackExamples.push({
-      problem: `${a} + ${b} = ?`,
-      solution: String(a + b),
-      explanation: `Para resolver ${a} + ${b}, sumamos: ${a} + ${b} = ${a + b}`
-      });
-  }
-  return fallbackExamples;
+  console.warn(`[getMockExamplesForLevel] Called for topic "${topic}" level ${level} - returning empty array to force AI generation`);
+  return [];
 }
 
 // Generate examples for a single level
@@ -713,71 +395,23 @@ export async function generateExamplesForSingleLevelAction(topic: string, level:
         };
       });
     } else {
-      // Fallback to mock examples if generation fails
-      examples = getMockExamplesForLevel(topic, level);
+      // Return error instead of incorrect examples
+      console.error(`[generateExamplesForSingleLevel] Failed to generate valid exercises for level ${level}, topic "${topic}"`);
+      return { error: 'No se pudieron generar ejemplos válidos. Por favor, intenta de nuevo.' };
     }
     
     return { data: { [level]: examples } };
   } catch (error) {
     console.error(`Error generating examples for level ${level}:`, error);
-    // Use mock examples as fallback
-    const mockExamples = getMockExamplesForLevel(topic, level);
-    return { data: { [level]: mockExamples } };
+    // Return error instead of incorrect examples
+    return { error: `Error al generar ejemplos: ${error instanceof Error ? error.message : 'Error desconocido'}` };
   }
 }
 
-// Get example by difficulty action
+// Get example by difficulty action - returns error to force AI generation
 export async function getExampleByDifficultyAction(topic: string, difficulty: number) {
-  try {
-    // Generate example based on topic and difficulty
-    const examples: Record<string, Record<number, string>> = {
-      'suma': {
-        1: '2 + 3 = ?',
-        2: '15 + 8 = ?',
-        3: '27 + 19 = ?',
-        4: '134 + 67 = ?',
-        5: '358 + 246 = ?',
-        6: '1,234 + 789 = ?',
-        7: '3.5 + 2.7 = ?',
-        8: '15.75 + 8.49 = ?',
-        9: '1/2 + 1/4 = ?',
-        10: '3/7 + 5/9 = ?',
-      },
-      'multiplicación': {
-        1: '2 × 3 = ?',
-        2: '5 × 4 = ?',
-        3: '7 × 8 = ?',
-        4: '12 × 9 = ?',
-        5: '23 × 17 = ?',
-        6: '134 × 25 = ?',
-        7: '3.5 × 2 = ?',
-        8: '12.5 × 4.8 = ?',
-        9: '2/3 × 3/4 = ?',
-        10: '(x + 3)(x - 2) = ?',
-      },
-      'default': {
-        1: 'Ejercicio nivel 1',
-        2: 'Ejercicio nivel 2',
-        3: 'Ejercicio nivel 3',
-        4: 'Ejercicio nivel 4',
-        5: 'Ejercicio nivel 5',
-        6: 'Ejercicio nivel 6',
-        7: 'Ejercicio nivel 7',
-        8: 'Ejercicio nivel 8',
-        9: 'Ejercicio nivel 9',
-        10: 'Ejercicio nivel 10',
-      }
-    };
-    
-    const topicLower = topic.toLowerCase();
-    const topicExamples = examples[topicLower] || examples['default'];
-    const example = topicExamples[difficulty] || topicExamples[5];
-    
-    return { data: example };
-  } catch (error) {
-    console.error('Error getting example:', error);
-    return { error: 'Failed to get example' };
-  }
+  console.warn(`[getExampleByDifficultyAction] Called for topic "${topic}" difficulty ${difficulty} - no hardcoded examples allowed`);
+  return { error: 'No hardcoded examples - use AI generation instead' };
 }
 
 // Validate and fix exercises with invalid format or math
@@ -900,17 +534,10 @@ async function validateAndFixExercises(
       }
     }
     
-    // If we couldn't regenerate, create a simple fallback exercise
+    // If we couldn't regenerate, don't add a fallback - let AI handle all generation
     if (!regenerated) {
-      console.error(`Failed to regenerate valid exercise after ${maxAttempts} attempts, using fallback`);
-      const num1 = Math.floor(Math.random() * 10) + 1;
-      const num2 = Math.floor(Math.random() * 10) + 1;
-      validExercises.splice(invalidIndex, 0, {
-        id: `exercise-${invalidIndex + 1}`,
-        problem: `${num1} + ${num2} = ?`,
-        solution: (num1 + num2).toString(),
-        explanation: `Para resolver ${num1} + ${num2}, sumamos: ${num1} + ${num2} = ${num1 + num2}`
-        });
+      console.error(`Failed to regenerate valid exercise after ${maxAttempts} attempts - skipping this exercise`);
+      // Don't add any hardcoded exercise - this violates the user's requirement
     }
   }
   
@@ -1005,81 +632,21 @@ export async function generatePracticeSessionAction(card: {
       difficulty: card.difficulty
       });
     
-    // Fallback to mock data when API fails
-    console.warn(`Using mock exercises for topic: ${card.topic}`);
-    const mockExercises = generateMockPracticeSession(card);
-    return { data: mockExercises };
+    // No fallback to mock data - return error instead
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { error: `Failed to generate exercises: ${errorMessage}` };
   }
 }
 
-// Mock practice session generator
+// Mock practice session generator - returns empty array to force AI generation
 function generateMockPracticeSession(card: {
   topic: string;
   difficulty: number;
   customInstructions: string;
   exerciseCount: number;
 }) {
-  const exercises = [];
-  
-  for (let i = 0; i < card.exerciseCount; i++) {
-    const baseNum = card.difficulty * 10;
-    
-    // Generate different types of problems based on topic keywords
-    const topicLower = card.topic.toLowerCase();
-    let problem, solution, explanation;
-    
-    if (topicLower.includes('suma') || topicLower.includes('adición') || topicLower.includes('addition')) {
-      const a = Math.floor(Math.random() * baseNum) + 1;
-      const b = Math.floor(Math.random() * baseNum) + 1;
-      problem = `${a} + ${b} = ?`;
-      solution = (a + b).toString();
-      explanation = `Para resolver ${a} + ${b}, sumamos los números: ${a} + ${b} = ${solution}`;
-    } else if (topicLower.includes('resta') || topicLower.includes('substracción') || topicLower.includes('subtraction')) {
-      const a = Math.floor(Math.random() * baseNum * 2) + baseNum;
-      const b = Math.floor(Math.random() * baseNum) + 1;
-      problem = `${a} - ${b} = ?`;
-      solution = (a - b).toString();
-      explanation = `Para resolver ${a} - ${b}, restamos: ${a} - ${b} = ${solution}`;
-    } else if (topicLower.includes('multiplicación') || topicLower.includes('producto') || topicLower.includes('multiplication')) {
-      const a = Math.floor(Math.random() * (baseNum / 2)) + 1;
-      const b = Math.floor(Math.random() * (baseNum / 2)) + 1;
-      problem = `${a} × ${b} = ?`;
-      solution = (a * b).toString();
-      explanation = `Para resolver ${a} × ${b}, multiplicamos: ${a} × ${b} = ${solution}`;
-    } else if (topicLower.includes('división') || topicLower.includes('division')) {
-      const b = Math.floor(Math.random() * (baseNum / 2)) + 1;
-      const result = Math.floor(Math.random() * (baseNum / 2)) + 1;
-      const a = b * result;
-      problem = `${a} ÷ ${b} = ?`;
-      solution = result.toString();
-      explanation = `Para resolver ${a} ÷ ${b}, dividimos: ${a} ÷ ${b} = ${solution}`;
-    } else if (topicLower.includes('fraccion') || topicLower.includes('fracción')) {
-      const nums = [1, 2, 3, 4, 5, 6, 8];
-      const a = nums[Math.floor(Math.random() * nums.length)];
-      const b = nums[Math.floor(Math.random() * nums.length)];
-      const c = nums[Math.floor(Math.random() * nums.length)];
-      const d = nums[Math.floor(Math.random() * nums.length)];
-      problem = `${a}/${b} + ${c}/${d} = ?`;
-      solution = `${(a*d + c*b)}/${b*d}`;
-      explanation = `Para sumar fracciones: ${a}/${b} + ${c}/${d} = ${(a*d + c*b)}/${b*d}`;
-    } else {
-      // Generic math problem for any other topic
-      const a = Math.floor(Math.random() * baseNum) + 1;
-      const b = Math.floor(Math.random() * baseNum) + 1;
-      problem = `Ejercicio ${i + 1} de ${card.topic}: ${a} y ${b}`;
-      solution = `Solución para ${card.topic}`;
-      explanation = `Este es un ejercicio de práctica para ${card.topic}. Con API activa, obtendrás ejercicios específicos.`;
-    }
-    
-    exercises.push({
-      id: `exercise-${i + 1}`,
-      problem,
-      solution,
-      explanation
-      });
-  }
-  
-  return exercises;
+  console.warn(`[generateMockPracticeSession] Called for topic "${card.topic}" - returning empty array to force AI generation`);
+  return [];
 }
 
 // Check answer action
@@ -1182,12 +749,8 @@ export async function generateSingleExerciseAction(card: {
   } catch (error) {
     console.error('Error generating single exercise:', error);
     
-    // Fallback to mock
-    const mockExercise = generateMockPracticeSession({
-      ...card,
-      exerciseCount: 1
-    })[0];
-    
-    return { data: mockExercise };
+    // No fallback to mock - return error instead
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { error: `Failed to generate exercise: ${errorMessage}` };
   }
 }
