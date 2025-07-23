@@ -31,7 +31,9 @@ import {
   Loader2,
   Plus,
   Pencil,
-  Trash2
+  Trash2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 // Note: generateExamplesForAllLevelsAction is not available in the API client yet
@@ -92,6 +94,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
   const [lastGeneratedTopic, setLastGeneratedTopic] = useState<string>('');
   const [regeneratingLevel, setRegeneratingLevel] = useState<number | null>(null);
   const [regeneratingAllLevels, setRegeneratingAllLevels] = useState(false);
+  const [showAllExamples, setShowAllExamples] = useState(false);
 
   // Initialize color and icon from existing card
   useEffect(() => {
@@ -578,7 +581,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
               </div>
               {structuredExamples[difficulty]?.length > 0 ? (
                 <div className="space-y-3">
-                  {structuredExamples[difficulty].slice(0, 3).map((example, index) => (
+                  {(showAllExamples ? structuredExamples[difficulty] : structuredExamples[difficulty].slice(0, 3)).map((example, index) => (
                     <div key={index} className="flex items-start justify-between gap-2">
                       <div className="space-y-1 flex-1">
                         <p className="font-mono text-base">{example.problem}</p>
@@ -601,20 +604,52 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
                     </div>
                   ))}
                   {structuredExamples[difficulty].length > 3 && (
-                    <p className="text-xs text-muted-foreground">
-                      y {structuredExamples[difficulty].length - 3} ejemplo{structuredExamples[difficulty].length - 3 !== 1 ? 's' : ''} más...
-                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllExamples(!showAllExamples)}
+                      className="w-full mt-2"
+                    >
+                      {showAllExamples ? (
+                        <>
+                          <ChevronUp className="h-4 w-4 mr-2" />
+                          Ver menos
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4 mr-2" />
+                          Ver {structuredExamples[difficulty].length - 3} ejemplo{structuredExamples[difficulty].length - 3 !== 1 ? 's' : ''} más
+                        </>
+                      )}
+                    </Button>
                   )}
                 </div>
               ) : levelExamples[difficulty]?.length > 0 ? (
                 <div className="space-y-2">
-                  {levelExamples[difficulty].slice(0, 3).map((example, index) => (
+                  {(showAllExamples ? levelExamples[difficulty] : levelExamples[difficulty].slice(0, 3)).map((example, index) => (
                     <p key={index} className="font-mono text-base">{example}</p>
                   ))}
                   {levelExamples[difficulty].length > 3 && (
-                    <p className="text-xs text-muted-foreground">
-                      y {levelExamples[difficulty].length - 3} ejemplo{levelExamples[difficulty].length - 3 !== 1 ? 's' : ''} más...
-                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllExamples(!showAllExamples)}
+                      className="w-full mt-2"
+                    >
+                      {showAllExamples ? (
+                        <>
+                          <ChevronUp className="h-4 w-4 mr-2" />
+                          Ver menos
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4 mr-2" />
+                          Ver {levelExamples[difficulty].length - 3} ejemplo{levelExamples[difficulty].length - 3 !== 1 ? 's' : ''} más
+                        </>
+                      )}
+                    </Button>
                   )}
                 </div>
               ) : (
@@ -808,6 +843,7 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
           }
         }}
         level={difficulty}
+        topic={correctedTopic || topic}
         examples={levelExamples[difficulty] || []}
         structuredExamples={structuredExamples[difficulty]}
         editingExample={editingExample}

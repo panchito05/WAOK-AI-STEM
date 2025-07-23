@@ -14,15 +14,17 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, X, Info } from 'lucide-react';
+import { Plus, X, Info, Sparkles, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { StructuredExample } from '@/lib/storage';
 import { validateStructuredExample } from '@/lib/math-validator';
+import { api } from '@/lib/api-client';
 
 interface LevelExamplesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   level: number;
+  topic: string;
   examples: string[]; // Mantener para compatibilidad
   structuredExamples?: StructuredExample[]; // Nueva estructura
   editingExample?: { index: number; example: StructuredExample } | null;
@@ -34,6 +36,7 @@ export default function LevelExamplesDialog({
   open,
   onOpenChange,
   level,
+  topic,
   examples,
   structuredExamples,
   editingExample,
@@ -43,6 +46,7 @@ export default function LevelExamplesDialog({
   const [newProblem, setNewProblem] = useState('');
   const [newSolution, setNewSolution] = useState('');
   const [newExplanation, setNewExplanation] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
   // Pre-llenar campos cuando se está editando
@@ -230,6 +234,38 @@ export default function LevelExamplesDialog({
     return 'text-red-600';
   };
 
+  const handleGenerateWithAI = async () => {
+    setIsGenerating(true);
+    
+    try {
+      const result = await api.generateExamplesForSingleLevel(topic, level);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      if (result.data && result.data[level] && result.data[level].length > 0) {
+        const example = result.data[level][0];
+        setNewProblem(example.problem);
+        setNewSolution(example.solution);
+        setNewExplanation(example.explanation);
+        
+        toast({
+          title: 'Ejemplo generado',
+          description: 'Revisa y ajusta el ejemplo antes de guardarlo',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo generar el ejemplo',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -304,6 +340,28 @@ export default function LevelExamplesDialog({
               <p className="text-xs text-muted-foreground">
                 Cómo resolver el problema paso a paso
               </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                type="button"
+                variant="secondary"
+                onClick={handleGenerateWithAI}
+                disabled={isGenerating || !topic}
+                className="flex-1"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generar con IA
+                  </>
+                )}
+              </Button>
             </div>
 
             <Button 
