@@ -268,8 +268,8 @@ export default function LevelExamplesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             Ejemplos para Nivel {level}
             <Badge variant="secondary" className={getDifficultyColor(level)}>
@@ -281,7 +281,7 @@ export default function LevelExamplesDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto pr-2 space-y-4">
           {/* Info box */}
           <div className="rounded-lg border bg-muted/50 p-3 flex gap-2">
             <Info className="h-4 w-4 text-muted-foreground mt-0.5" />
@@ -386,7 +386,7 @@ export default function LevelExamplesDialog({
                 </p>
               </div>
             ) : (
-              <ScrollArea className="h-[300px] rounded-lg border p-4">
+              <ScrollArea className="h-[200px] rounded-lg border p-4">
                 <div className="space-y-3">
                   {hasStructuredExamples ? (
                     // Mostrar ejemplos estructurados
