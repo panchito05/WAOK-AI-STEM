@@ -143,9 +143,13 @@ export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProp
     return null;
   }, [playerPosition, isCellVisible, fogOfWar, gameState.difficulty]);
 
-  // Calculate grid size for responsive design
+  // Calculate grid size for responsive design - smaller cells for large mazes
   const gridSize = maze.length;
-  const cellSize = gridSize <= 10 ? 'w-12 h-12' : gridSize <= 15 ? 'w-10 h-10' : 'w-8 h-8';
+  const cellSize = gridSize <= 10 ? 'w-12 h-12' : 
+                   gridSize <= 15 ? 'w-10 h-10' : 
+                   gridSize <= 25 ? 'w-6 h-6' : 
+                   gridSize <= 35 ? 'w-4 h-4' :
+                   'w-3 h-3'; // Extremely small cells for 45x45 maze
 
   return (
     <div 
@@ -161,7 +165,11 @@ export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProp
         )}
         style={{
           gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-          maxWidth: gridSize <= 10 ? '600px' : gridSize <= 15 ? '750px' : '900px'
+          maxWidth: gridSize <= 10 ? '600px' : 
+                    gridSize <= 15 ? '750px' : 
+                    gridSize <= 25 ? '800px' :
+                    gridSize <= 35 ? '850px' :
+                    '900px' // Maximum size for 45x45
         }}
       >
         {maze.map((row, rowIndex) => 

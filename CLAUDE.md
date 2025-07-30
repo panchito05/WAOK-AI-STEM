@@ -228,16 +228,74 @@ The application is currently deployed on Netlify with the following configuratio
 
 For detailed deployment instructions, see [NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md)
 
-## Project Agents
+## Project Agents - Bidirectional Synchronization
 
-**IMPORTANT**: This project includes specialized AI agents. When setting up on a new computer, Claude should automatically check and create these agents if they don't exist. Each agent has specific expertise to help with different aspects of the project.
+**CRITICAL**: When opening this project, Claude MUST perform a complete bidirectional synchronization of agents:
 
-### Automatic Agent Setup Instructions
+### Agent Synchronization Protocol
 
-When this project is opened in Claude Code on a new computer:
-1. Check if the agents listed below exist using the `/agents` command
-2. For any missing agents, create them with the exact specifications provided
-3. Verify all agents are properly configured before proceeding
+1. **Inventory Phase** - Collect information from both sources:
+   ```
+   # Check agents currently in Claude
+   /agents
+   
+   # Check agent files in project
+   ls -la .claude/agents/
+   ```
+
+2. **Comparison Phase** - Identify differences:
+   - Agents that exist in Claude but NOT in `.claude/agents/` → DOCUMENT THEM
+   - Agents that exist in `.claude/agents/` but NOT in Claude → CREATE THEM
+   - Agents that exist in both → VERIFY they match
+
+3. **Documentation Phase** - For agents in Claude but not documented:
+   - Extract their configuration using `/agents` output
+   - Create corresponding `.md` file in `.claude/agents/`
+   - Format:
+     ```
+     ---
+     name: [agent-name]
+     description: [from Claude]
+     tools: [from Claude]
+     color: [from Claude]
+     ---
+     
+     [System prompt from Claude]
+     ```
+
+4. **Creation Phase** - For agents documented but not in Claude:
+   - Read each `.md` file in `.claude/agents/`
+   - Create the agent using: `/agents create [name] "[description]" --tools [tools]`
+   - Apply the system prompt from the file
+
+5. **Verification Phase**:
+   - Run `/agents` to confirm all agents are present
+   - Ensure count matches: agents in Claude = files in `.claude/agents/`
+   - Report to user: "Synchronized X agents (Y created, Z documented)"
+
+### Synchronization Rules
+
+- **PRESERVE ALL AGENTS**: Never delete, always add missing ones
+- **PRIORITY**: If conflict, preserve the most complete version
+- **AUTOMATIC**: This happens without user intervention
+- **REPORT**: Always inform user of actions taken
+- **COMPLETE**: No work proceeds until synchronization is complete
+
+### Expected Outcome
+
+After synchronization:
+- Every agent in Claude has a corresponding file in `.claude/agents/`
+- Every file in `.claude/agents/` has a corresponding agent in Claude
+- Total agents = Union of both sources (no agent is lost)
+- User can safely export project knowing all agents are documented
+- User can safely import project knowing all agents will be created
+
+### Implementation Priority
+
+1. First, document any undocumented agents (Claude → Files)
+2. Then, create any missing agents (Files → Claude)
+3. Finally, verify complete synchronization
+4. Report: "Agent synchronization complete: X total agents ready"
 
 ### Agent Specifications
 
@@ -363,3 +421,181 @@ agents.forEach(agent => {
 3. **Tools**: Some agents use all tools (*), others use specific tool sets
 4. **Proactive Usage**: Many agents are marked for PROACTIVE use - Claude should use them automatically when relevant
 5. **Updates**: If agent specifications change, update both this file and the corresponding `.claude/agents/*.md` files
+
+## MCP (Model Context Protocol) Servers - Bidirectional Synchronization
+
+**CRITICAL**: This project requires specific MCP servers. Claude MUST perform bidirectional synchronization of MCPs when opening the project.
+
+### MCP Synchronization Protocol
+
+1. **Inventory Phase** - Check installed MCPs:
+   ```bash
+   # List all MCPs currently installed
+   claude mcp list
+   
+   # Check project MCP requirements file
+   cat .claude/mcp-requirements.md
+   ```
+
+2. **Comparison Phase** - Identify gaps:
+   - MCPs installed but NOT documented → ADD to `.claude/mcp-requirements.md`
+   - MCPs documented but NOT installed → INSTALL them
+   - Version/config mismatches → UPDATE to latest
+
+3. **Documentation Phase** - Save undocumented MCPs:
+   - Extract configuration from `claude mcp list`
+   - Update `.claude/mcp-requirements.md` with any new MCPs
+   - Include installation commands and environment variables
+
+4. **Installation Phase** - Install missing MCPs:
+   ```bash
+   # Install all required MCPs with user scope for global availability
+   # Each MCP installation command is listed below
+   ```
+
+5. **Verification Phase**:
+   - Run `claude mcp list` to confirm all MCPs connected
+   - Test critical MCPs with sample commands
+   - Report: "MCP synchronization complete: X MCPs ready"
+
+### Required MCP Servers
+
+#### 1. Context7 - Library Documentation
+```bash
+claude mcp add context7 -s user -- npx -y @upstash/context7-mcp@latest
+```
+- **Purpose**: Access up-to-date documentation for any library
+- **Usage**: Fetch React, Vue, Python, etc. documentation
+
+#### 2. Filesystem - File Access
+```bash
+claude mcp add filesystem -s user -- npx -y @modelcontextprotocol/server-filesystem /home/waok "/mnt/c/Users/wilbe/Desktop"
+```
+- **Purpose**: Read/write files across WSL and Windows
+- **Paths**: WSL home + Windows Desktop directory
+
+#### 3. Git - Version Control
+```bash
+claude mcp add git -s user -- npx -y @cyanheads/git-mcp-server
+```
+- **Purpose**: Git operations (commit, branch, merge, etc.)
+
+#### 4. GitHub - Repository Management
+```bash
+claude mcp add github -s user -e GITHUB_PERSONAL_ACCESS_TOKEN=YOUR_TOKEN -- npx -y @modelcontextprotocol/server-github
+```
+- **Purpose**: GitHub API operations
+- **Required**: Valid GitHub token with repo access
+
+#### 5. Sequential Thinking - Problem Solving
+```bash
+claude mcp add sequential-thinking -s user -- npx -y @modelcontextprotocol/server-sequential-thinking
+```
+- **Purpose**: Break down complex problems into steps
+
+#### 6. Desktop Commander - System Control
+```bash
+claude mcp add desktop-commander -s user -- npx -y @wonderwhy-er/desktop-commander
+```
+- **Purpose**: Desktop automation, screenshots, system control
+
+#### 7. Netlify - Deployment
+```bash
+claude mcp add netlify -s user -e NETLIFY_PERSONAL_ACCESS_TOKEN=YOUR_TOKEN -- npx -y @netlify/mcp
+```
+- **Purpose**: Deploy to Netlify, manage sites
+- **Required**: Netlify API token
+
+#### 8. Playwright - Browser Automation
+```bash
+claude mcp add playwright -s user -- npx -y @playwright/mcp
+```
+- **Purpose**: Web scraping, E2E testing, browser automation
+
+#### 9. Firebase - Backend Services
+```bash
+claude mcp add firebase -s user -e SERVICE_ACCOUNT_KEY_PATH=/path/to/firebase-service-account.json -e FIREBASE_STORAGE_BUCKET=project-name.firebasestorage.app -- npx -y @gannonh/firebase-mcp
+```
+- **Purpose**: Firebase operations (Firestore, Storage, Auth)
+- **Required**: Service account JSON file
+
+#### 10. PostgreSQL - Database
+```bash
+claude mcp add postgres -s user -- npx -y @modelcontextprotocol/server-postgres postgresql://user:password@localhost:5432/database
+```
+- **Purpose**: PostgreSQL database operations
+- **Required**: PostgreSQL server running
+
+#### 11. MySQL - Database
+```bash
+claude mcp add mysql -s user -e MYSQL_HOST=127.0.0.1 -e MYSQL_PORT=3306 -e MYSQL_USER=root -e MYSQL_PASSWORD="" -e MYSQL_DATABASE=mysql -- npx -y mysql-mcp-server
+```
+- **Purpose**: MySQL database operations
+- **Required**: MySQL server running
+
+### MCP Requirements File
+
+The project maintains `.claude/mcp-requirements.md` with:
+- List of required MCPs
+- Installation commands
+- Required environment variables
+- Configuration notes
+
+### Environment Setup
+
+1. **Tokens Required**:
+   - GitHub Personal Access Token
+   - Netlify Personal Access Token
+   - Firebase Service Account JSON
+
+2. **Database Prerequisites**:
+   - PostgreSQL server (for postgres MCP)
+   - MySQL server (for mysql MCP)
+
+3. **System Requirements**:
+   - Node.js 20+ (via NVM recommended)
+   - WSL (for Windows users)
+
+### Installation Script
+
+For bulk installation, create and run:
+```bash
+#!/bin/bash
+# install-mcps.sh
+# Run: chmod +x install-mcps.sh && ./install-mcps.sh
+
+echo "Installing required MCPs for WAOK-AI-STEM project..."
+
+# Add each MCP installation command here
+# Use the commands from the Required MCP Servers section above
+
+echo "MCP installation complete. Run 'claude mcp list' to verify."
+```
+
+### Verification Commands
+
+After installation:
+```bash
+# List all MCPs
+claude mcp list
+
+# Inside Claude Code
+/mcp        # View available MCPs
+/status     # Check configuration
+```
+
+### Important Notes
+
+1. **Scope**: Always use `-s user` for global availability
+2. **Tokens**: Store securely, never commit to repository
+3. **Paths**: Adjust filesystem paths for your system
+4. **Updates**: MCPs update frequently, check for new versions
+5. **Project-specific**: Some MCPs may need project-specific configuration
+
+### Expected Outcome
+
+After synchronization:
+- All required MCPs installed and connected
+- Configuration documented in `.claude/mcp-requirements.md`
+- No manual MCP installation needed on new computers
+- Consistent MCP environment across all development machines

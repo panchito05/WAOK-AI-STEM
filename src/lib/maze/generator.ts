@@ -26,6 +26,18 @@ const DIRECTIONS: Record<Direction, Position> = {
 const DIRECTION_KEYS: Direction[] = ['up', 'down', 'left', 'right'];
 
 /**
+ * Shuffle an array using Fisher-Yates algorithm
+ */
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/**
  * Generates a maze using Recursive Backtracking algorithm
  * @param size - The size of the maze (small, medium, large)
  * @param difficulty - The difficulty level affecting path complexity
@@ -77,18 +89,37 @@ export function generateMaze(
   finalMaze[start.row][start.col].type = 'start';
   finalMaze[end.row][end.col].type = 'end';
   
+  // Find the optimal solution
+  const solution = findPath(finalMaze, start, end) || [];
+  
   // Add complexity based on difficulty
-  if (pathComplexity > 0.5) {
+  if (pathComplexity > 0.9) {
+    // For extreme difficulty, DO NOT add any complexity that creates loops
+    // The recursive backtracking already creates a perfect maze (single solution)
+    console.log('EXTREME DIFFICULTY: Maintaining perfect maze (single solution)');
+    
+    // Only add dead ends that don't create alternative paths
+    addExtremeDifficulty(finalMaze, gridSize, solution);
+    
+  } else if (pathComplexity > 0.5) {
+    // For easy/medium difficulty, add some loops
     addComplexity(finalMaze, gridSize, pathComplexity);
   }
   
-  // Debug print for small mazes
-  if (gridSize <= 15) {
+  // Debug print for small mazes or extreme difficulty
+  if (gridSize <= 15 || pathComplexity > 0.9) {
     printMaze(finalMaze);
+    
+    // Count paths for debugging
+    if (pathComplexity > 0.9) {
+      console.log('Verifying maze has single solution...');
+      const paths = countAllPaths(finalMaze, start, end);
+      console.log(`Total number of distinct paths from start to end: ${paths}`);
+      if (paths > 1) {
+        console.error('ERROR: Maze has multiple solutions!');
+      }
+    }
   }
-  
-  // Find the optimal solution
-  const solution = findPath(finalMaze, start, end) || [];
   
   console.log(`Maze generated. Solution path length: ${solution.length}`);
   
@@ -147,214 +178,228 @@ function shuffleDirections(): Direction[] {
 }
 
 /**
- * Add complexity to the maze by removing some walls
+ * Add extreme difficulty by creating many dead ends without creating alternate paths
+ * This ensures ONLY ONE solution path exists in the maze
  */
-function addComplexity(maze: MazeCell[][], size: number, complexity: number): void {
-  let removed = 0; // Declare at function scope
-  let loopsCreated = 0;
-  let branchesCreated = 0;
+function addExtremeDifficulty(maze: MazeCell[][], size: number, solution: Position[]): void {
+  console.log('\n=== EXTREME DIFFICULTY MODE ACTIVATED ===');
+  console.log('Initial solution path length:', solution.length);
   
-  // For high complexity (difficulty > 0.9), create strategic loops and dead ends
-  if (complexity > 0.9) {
-    // Much more conservative: only 2-3% of walls for large mazes
-    const maxLoops = Math.min(5, Math.floor(size * 0.2)); // Max 5 loops for a 20x20 maze
-    
-    // First pass: Create a few strategic loops by removing walls between paths
-    for (let attempts = 0; attempts < 1000 && loopsCreated < maxLoops; attempts++) {
-      const row = 2 + Math.floor(Math.random() * (size - 4));
-      const col = 2 + Math.floor(Math.random() * (size - 4));
-      
-      if (maze[row][col].type === 'wall') {
-        // Check if this wall is between two empty cells (creates loops)
-        const horizontalPath = row > 0 && row < size - 1 && 
-          maze[row - 1][col].type !== 'wall' && 
-          maze[row + 1][col].type !== 'wall';
-        const verticalPath = col > 0 && col < size - 1 && 
-          maze[row][col - 1].type !== 'wall' && 
-          maze[row][col + 1].type !== 'wall';
-        
-        // Additional check: ensure we're not creating large open spaces
-        if (horizontalPath || verticalPath) {
-          // Check surrounding area to prevent creating open spaces
-          let openNeighbors = 0;
-          for (let dr = -1; dr <= 1; dr++) {
-            for (let dc = -1; dc <= 1; dc++) {
-              if (dr === 0 && dc === 0) continue;
-              const nr = row + dr;
-              const nc = col + dc;
-              if (nr >= 0 && nr < size && nc >= 0 && nc < size && 
-                  maze[nr][nc].type !== 'wall') {
-                openNeighbors++;
-              }
-            }
-          }
-          
-          // Only create loop if it won't create a large open area
-          if (openNeighbors <= 3) {
-            maze[row][col].type = 'empty';
-            loopsCreated++;
-            removed++;
-          }
-        }
-      }
-    }
-    
-    // Second pass: Create small dead-end branches
-    const maxBranches = Math.min(3, Math.floor(size * 0.1)); // Max 3 branches for complexity
-    
-    for (let attempts = 0; attempts < 500 && branchesCreated < maxBranches; attempts++) {
-      const row = 2 + Math.floor(Math.random() * (size - 4));
-      const col = 2 + Math.floor(Math.random() * (size - 4));
-      
-      if (maze[row][col].type === 'wall') {
-        // Count adjacent empty cells
-        let emptyCount = 0;
-        let emptyNeighbor = null;
+  // First, verify we have a perfect maze (no loops)
+  const initialPaths = countAllPaths(maze, solution[0], solution[solution.length - 1]);
+  console.log('Initial number of paths:', initialPaths);
+  
+  if (initialPaths > 1) {
+    console.error('WARNING: Maze already has multiple paths before adding difficulty!');
+  }
+  
+  let deadEndsCreated = 0;
+  const solutionSet = new Set(solution.map(pos => `${pos.row},${pos.col}`));
+  
+  // Create a map of all empty cells and their connections
+  const emptyCells = new Map<string, number>();
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      if (maze[row][col].type === 'empty' || maze[row][col].type === 'start' || maze[row][col].type === 'end') {
+        let connections = 0;
         const neighbors = [
           { r: row - 1, c: col },
           { r: row + 1, c: col },
           { r: row, c: col - 1 },
           { r: row, c: col + 1 }
         ];
-        
         for (const n of neighbors) {
           if (n.r >= 0 && n.r < size && n.c >= 0 && n.c < size) {
             if (maze[n.r][n.c].type !== 'wall') {
-              emptyCount++;
+              connections++;
+            }
+          }
+        }
+        emptyCells.set(`${row},${col}`, connections);
+      }
+    }
+  }
+  
+  // Find all walls adjacent to exactly one empty cell (perfect for dead ends)
+  const potentialDeadEnds: Position[] = [];
+  for (let row = 1; row < size - 1; row++) {
+    for (let col = 1; col < size - 1; col++) {
+      if (maze[row][col].type === 'wall') {
+        let adjacentEmpty = 0;
+        let emptyNeighbor: Position | null = null;
+        
+        const neighbors = [
+          { row: row - 1, col: col },
+          { row: row + 1, col: col },
+          { row: row, col: col - 1 },
+          { row: row, col: col + 1 }
+        ];
+        
+        for (const n of neighbors) {
+          if (n.row >= 0 && n.row < size && n.col >= 0 && n.col < size) {
+            if (maze[n.row][n.col].type !== 'wall') {
+              adjacentEmpty++;
               emptyNeighbor = n;
             }
           }
         }
         
-        // Create dead-end branch if only one adjacent path
-        if (emptyCount === 1 && emptyNeighbor) {
-          // Verify this won't create an open space
-          let willCreateOpenSpace = false;
-          
-          // Check if creating this branch would form a 2x2 open area
-          for (let dr = -1; dr <= 0; dr++) {
-            for (let dc = -1; dc <= 0; dc++) {
-              let openCount = 0;
-              for (let r = 0; r < 2; r++) {
-                for (let c = 0; c < 2; c++) {
-                  const checkRow = row + dr + r;
-                  const checkCol = col + dc + c;
-                  if (checkRow >= 0 && checkRow < size && checkCol >= 0 && checkCol < size) {
-                    if ((checkRow === row && checkCol === col) || 
-                        maze[checkRow][checkCol].type !== 'wall') {
-                      openCount++;
-                    }
-                  }
-                }
-              }
-              if (openCount >= 4) {
-                willCreateOpenSpace = true;
-                break;
-              }
-            }
-            if (willCreateOpenSpace) break;
+        // Perfect dead end candidate: wall with exactly one empty neighbor
+        if (adjacentEmpty === 1 && emptyNeighbor) {
+          // Don't create dead ends directly off the solution path to avoid making it too obvious
+          const neighborKey = `${emptyNeighbor.row},${emptyNeighbor.col}`;
+          if (!solutionSet.has(neighborKey) || Math.random() < 0.3) {
+            potentialDeadEnds.push({ row, col });
           }
-          
-          if (!willCreateOpenSpace) {
-            maze[row][col].type = 'empty';
-            branchesCreated++;
-            removed++;
-            
-            // Create a very short branch (1-2 cells max)
-            const branchLength = Math.random() < 0.7 ? 1 : 2;
-            let currentRow = row;
-            let currentCol = col;
-            
-            for (let j = 0; j < branchLength; j++) {
-              // Find valid direction to extend
-              let extended = false;
-              for (const dir of DIRECTION_KEYS) {
-                const delta = DIRECTIONS[dir];
-                const nextRow = currentRow + delta.row / 2;
-                const nextCol = currentCol + delta.col / 2;
-                
-                // Skip the direction we came from
-                if (nextRow === emptyNeighbor.r && nextCol === emptyNeighbor.c) continue;
-                
-                if (nextRow > 1 && nextRow < size - 2 && 
-                    nextCol > 1 && nextCol < size - 2 &&
-                    maze[nextRow][nextCol].type === 'wall') {
-                  
-                  // Ensure extending won't create connections or open spaces
-                  let adjacentEmpty = 0;
-                  const nextNeighbors = [
-                    { r: nextRow - 1, c: nextCol },
-                    { r: nextRow + 1, c: nextCol },
-                    { r: nextRow, c: nextCol - 1 },
-                    { r: nextRow, c: nextCol + 1 }
-                  ];
-                  for (const n of nextNeighbors) {
-                    if (n.r >= 0 && n.r < size && n.c >= 0 && n.c < size) {
-                      if (maze[n.r][n.c].type !== 'wall' || 
-                          (n.r === currentRow && n.c === currentCol)) {
-                        adjacentEmpty++;
-                      }
-                    }
-                  }
-                  
-                  // Only extend if it maintains dead-end property
-                  if (adjacentEmpty <= 1) {
-                    maze[nextRow][nextCol].type = 'empty';
-                    currentRow = nextRow;
-                    currentCol = nextCol;
-                    removed++;
-                    extended = true;
-                    break;
-                  }
-                }
-              }
-              
-              if (!extended) break;
-            }
-          }
-        }
-      }
-    }
-  } else {
-    // Original complexity for easier difficulties
-    const wallsToRemove = Math.floor(size * complexity);
-    
-    for (let attempts = 0; attempts < wallsToRemove * 10 && removed < wallsToRemove; attempts++) {
-      const row = 1 + Math.floor(Math.random() * (size - 2));
-      const col = 1 + Math.floor(Math.random() * (size - 2));
-      
-      if (maze[row][col].type === 'wall') {
-        // Count adjacent empty cells
-        let emptyCount = 0;
-        const neighbors = [
-          { r: row - 1, c: col },
-          { r: row + 1, c: col },
-          { r: row, c: col - 1 },
-          { r: row, c: col + 1 }
-        ];
-        
-        for (const n of neighbors) {
-          if (n.r >= 0 && n.r < size && n.c >= 0 && n.c < size) {
-            if (maze[n.r][n.c].type !== 'wall') {
-              emptyCount++;
-            }
-          }
-        }
-        
-        // Only remove if it connects exactly 2 empty cells
-        if (emptyCount === 2) {
-          maze[row][col].type = 'empty';
-          removed++;
         }
       }
     }
   }
   
-  if (complexity > 0.9) {
-    console.log(`Added complexity (hard mode): created ${loopsCreated || 0} loops and ${branchesCreated || 0} branches (${removed} walls removed)`);
-  } else {
-    console.log(`Added complexity: removed ${removed} walls`);
+  // Shuffle and create dead ends
+  const shuffledDeadEnds = shuffleArray(potentialDeadEnds);
+  const maxDeadEnds = Math.min(Math.floor(size * 2), shuffledDeadEnds.length); // MANY more dead ends for extreme difficulty
+  
+  console.log(`Creating up to ${maxDeadEnds} dead ends from ${shuffledDeadEnds.length} candidates`);
+  
+  for (let i = 0; i < maxDeadEnds; i++) {
+    const pos = shuffledDeadEnds[i];
+    
+    // Double-check this won't create a loop
+    let willCreateLoop = false;
+    const extendedNeighbors = [
+      { row: pos.row - 1, col: pos.col },
+      { row: pos.row + 1, col: pos.col },
+      { row: pos.row, col: pos.col - 1 },
+      { row: pos.row, col: pos.col + 1 }
+    ];
+    
+    let emptyCount = 0;
+    for (const n of extendedNeighbors) {
+      if (n.row >= 0 && n.row < size && n.col >= 0 && n.col < size) {
+        if (maze[n.row][n.col].type !== 'wall') {
+          emptyCount++;
+        }
+      }
+    }
+    
+    if (emptyCount === 1) {
+      maze[pos.row][pos.col].type = 'empty';
+      deadEndsCreated++;
+      
+      // Extend this dead end to make it longer and more misleading
+      let currentPos = pos;
+      const maxLength = 10 + Math.floor(Math.random() * 20); // 10-29 cells long for EXTREME difficulty
+      
+      for (let j = 0; j < maxLength; j++) {
+        // Find a direction to extend that won't create a loop
+        let extended = false;
+        const directions = shuffleArray(['up', 'down', 'left', 'right'] as Direction[]);
+        
+        for (const dir of directions) {
+          const delta = DIRECTIONS[dir];
+          const nextRow = currentPos.row + delta.row / 2;
+          const nextCol = currentPos.col + delta.col / 2;
+          
+          if (nextRow > 0 && nextRow < size - 1 && 
+              nextCol > 0 && nextCol < size - 1 &&
+              maze[nextRow][nextCol].type === 'wall') {
+            
+            // Check ALL neighbors of the potential new cell
+            let isSafe = true;
+            let adjacentEmptyCount = 0;
+            
+            for (let dr = -1; dr <= 1; dr++) {
+              for (let dc = -1; dc <= 1; dc++) {
+                if (Math.abs(dr) + Math.abs(dc) === 1) { // Only orthogonal
+                  const checkRow = nextRow + dr;
+                  const checkCol = nextCol + dc;
+                  
+                  if (checkRow >= 0 && checkRow < size && 
+                      checkCol >= 0 && checkCol < size) {
+                    if (maze[checkRow][checkCol].type !== 'wall') {
+                      // Allow connection to current position
+                      if (checkRow === currentPos.row && checkCol === currentPos.col) {
+                        adjacentEmptyCount++;
+                      } else {
+                        // Any other empty cell means this would create a loop
+                        isSafe = false;
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+              if (!isSafe) break;
+            }
+            
+            // Only extend if it's safe (exactly one connection back to current)
+            if (isSafe && adjacentEmptyCount === 1) {
+              maze[nextRow][nextCol].type = 'empty';
+              currentPos = { row: nextRow, col: nextCol };
+              extended = true;
+              break;
+            }
+          }
+        }
+        
+        if (!extended) break;
+      }
+    }
   }
+  
+  console.log(`Added EXTREME difficulty: created ${deadEndsCreated} dead ends with NO alternate paths`);
+  
+  // Final verification
+  const finalPaths = countAllPaths(maze, solution[0], solution[solution.length - 1]);
+  console.log('Final number of paths after adding dead ends:', finalPaths);
+  
+  if (finalPaths > 1) {
+    console.error(`ERROR: Maze still has ${finalPaths} paths! Need to fix the algorithm.`);
+  } else {
+    console.log('✓ SUCCESS: Maze has exactly ONE solution path!');
+  }
+}
+
+/**
+ * Add complexity to the maze by removing some walls (for easy/medium difficulty)
+ */
+function addComplexity(maze: MazeCell[][], size: number, complexity: number): void {
+  let removed = 0;
+  const wallsToRemove = Math.floor(size * complexity);
+  
+  // For easy/medium difficulty, create a few loops by removing walls between paths
+  for (let attempts = 0; attempts < wallsToRemove * 10 && removed < wallsToRemove; attempts++) {
+    const row = 1 + Math.floor(Math.random() * (size - 2));
+    const col = 1 + Math.floor(Math.random() * (size - 2));
+    
+    if (maze[row][col].type === 'wall') {
+      // Count adjacent empty cells
+      let emptyCount = 0;
+      const neighbors = [
+        { r: row - 1, c: col },
+        { r: row + 1, c: col },
+        { r: row, c: col - 1 },
+        { r: row, c: col + 1 }
+      ];
+      
+      for (const n of neighbors) {
+        if (n.r >= 0 && n.r < size && n.c >= 0 && n.c < size) {
+          if (maze[n.r][n.c].type !== 'wall') {
+            emptyCount++;
+          }
+        }
+      }
+      
+      // Only remove if it connects exactly 2 empty cells (creates a loop)
+      if (emptyCount === 2) {
+        maze[row][col].type = 'empty';
+        removed++;
+      }
+    }
+  }
+  
+  console.log(`Added complexity: removed ${removed} walls`);
 }
 
 /**
@@ -530,6 +575,57 @@ export function validateMaze(maze: MazeCell[][]): boolean {
   
   const path = findPath(maze, start, end);
   return path !== null && path.length > 0;
+}
+
+/**
+ * Count all possible paths from start to end (for debugging)
+ */
+function countAllPaths(
+  maze: MazeCell[][], 
+  start: Position, 
+  end: Position
+): number {
+  let pathCount = 0;
+  const visited = new Set<string>();
+  
+  function dfs(current: Position): void {
+    const key = `${current.row},${current.col}`;
+    
+    // Reached the end
+    if (current.row === end.row && current.col === end.col) {
+      pathCount++;
+      return;
+    }
+    
+    // Mark as visited
+    visited.add(key);
+    
+    // Try all directions
+    const neighbors = [
+      { row: current.row - 1, col: current.col },
+      { row: current.row + 1, col: current.col },
+      { row: current.row, col: current.col - 1 },
+      { row: current.row, col: current.col + 1 }
+    ];
+    
+    for (const neighbor of neighbors) {
+      const neighborKey = `${neighbor.row},${neighbor.col}`;
+      
+      // Check if valid and unvisited
+      if (neighbor.row >= 0 && neighbor.row < maze.length &&
+          neighbor.col >= 0 && neighbor.col < maze[0].length &&
+          maze[neighbor.row][neighbor.col].type !== 'wall' &&
+          !visited.has(neighborKey)) {
+        dfs(neighbor);
+      }
+    }
+    
+    // Backtrack
+    visited.delete(key);
+  }
+  
+  dfs(start);
+  return pathCount;
 }
 
 export function coordinatesToKey(row: number, col: number): string {

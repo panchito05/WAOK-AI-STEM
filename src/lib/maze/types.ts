@@ -61,7 +61,7 @@ export interface MazeConfig {
 export const MAZE_SIZES: Record<MazeSize, { gridSize: number; name: string; description: string }> = {
   small: { gridSize: 10, name: 'Pequeño', description: 'Perfecto para principiantes' },
   medium: { gridSize: 15, name: 'Mediano', description: 'Desafío equilibrado' },
-  large: { gridSize: 20, name: 'Grande', description: 'Para expertos' }
+  large: { gridSize: 45, name: 'Grande', description: 'Laberinto masivo para expertos' }
 };
 
 // Configuración de dificultades
