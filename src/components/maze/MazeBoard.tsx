@@ -80,7 +80,7 @@ export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProp
         } else if (cell.isHint) {
           classes += 'bg-blue-200 animate-pulse ';
         } else if (isVisited && gameState.config?.showVisitedPath !== false) {
-          classes += 'bg-blue-50 ';
+          classes += 'bg-blue-200 border-blue-300 border ';
         } else {
           classes += 'bg-white ';
         }
