@@ -52,6 +52,8 @@ interface AnswerPanelProps {
   onBackToActive?: () => void;
   currentIndex?: number;
   onPrevious?: () => void;
+  timerSeconds?: number;
+  timerPercentage?: number;
 }
 
 export default function AnswerPanel({
@@ -73,6 +75,8 @@ export default function AnswerPanel({
   onBackToActive,
   currentIndex = 0,
   onPrevious,
+  timerSeconds,
+  timerPercentage,
 }: AnswerPanelProps) {
   const [answer, setAnswer] = useState('');
   const [showNumpad, setShowNumpad] = useState(true);
@@ -165,6 +169,18 @@ export default function AnswerPanel({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Tu Respuesta</span>
+            {timerSeconds !== undefined && timerSeconds > 0 && (
+              <Badge 
+                variant="secondary" 
+                className={
+                  timerPercentage && timerPercentage > 50 ? "bg-green-500 hover:bg-green-600 text-white" :
+                  timerPercentage && timerPercentage > 25 ? "bg-yellow-500 hover:bg-yellow-600 text-white" :
+                  "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                }
+              >
+                ⏱️ {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
+              </Badge>
+            )}
             <Badge variant={remainingAttempts > 1 ? 'default' : 'destructive'}>
               {remainingAttempts} {remainingAttempts === 1 ? 'intento' : 'intentos'}
             </Badge>

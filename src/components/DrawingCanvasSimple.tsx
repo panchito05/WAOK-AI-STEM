@@ -53,6 +53,9 @@ interface DrawingCanvasSimpleProps {
   isReviewMode?: boolean;
   userAnswer?: string;
   onBackToActive?: () => void;
+  // Timer props
+  timerSeconds?: number;
+  timerPercentage?: number;
 }
 
 const COLORS = [
@@ -84,7 +87,9 @@ const DrawingCanvasSimple = forwardRef<
   onRevealSolution,
   isReviewMode = false,
   userAnswer,
-  onBackToActive
+  onBackToActive,
+  timerSeconds,
+  timerPercentage,
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [lines, setLines] = useState<Line[]>([]);
@@ -385,6 +390,24 @@ const DrawingCanvasSimple = forwardRef<
           onTouchEnd={stopInteraction}
           style={{ cursor: cursorStyle }}
         />
+        
+        {/* Timer display - only in fullscreen mode */}
+        {isFullscreen && timerSeconds !== undefined && timerSeconds > 0 && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+            <Badge 
+              variant="secondary"
+              className={cn(
+                "text-lg font-bold px-4 py-2 shadow-lg transition-colors",
+                timerPercentage && timerPercentage > 50 ? "bg-green-500 hover:bg-green-600 text-white" :
+                timerPercentage && timerPercentage > 25 ? "bg-yellow-500 hover:bg-yellow-600 text-white" :
+                "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+              )}
+            >
+              ⏱️ {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
+            </Badge>
+          </div>
+        )}
+        
       </Card>
 
       {!isFullscreen && (

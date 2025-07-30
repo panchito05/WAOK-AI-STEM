@@ -18,9 +18,10 @@ claude --dangerously-skip-permissions
 ### Prompt: Confirmación de Entendimiento
 ```
 Antes de hacer cualquier cambio, explícame en términos simples:
-1. ¿Qué entiendes que quiero hacer? importante no hagas ningun cambio hasta que me confirmes que entendiste lo que quiero hacer.
+1. ¿Qué entiendes que quiero hacer? 
 2. ¿Cuál es el resultado esperado después del cambio?
-3. ¿Que opinas tienes alguna recomendacion o sugerencia basado en lo que entendiste hasta ahora o te parece bien hacerlo asi como te dije?
+3.importante no hagas ningun cambio hasta que me confirmes que entendiste lo que quiero hacer.
+4. ¿Que opinas tienes alguna recomendacion o sugerencia basado en lo que entendiste hasta ahora o te parece bien hacerlo asi como te dije?
 
 Responde de forma breve y clara para confirmar que estamos alineados.
 
@@ -34,7 +35,7 @@ Responde de forma breve y clara para confirmar que estamos alineados.
 
 ### Prompt: Plan de Implementación Detallado
 ```
-Ultra Think Ahora que confirmamos el objetivo, analiza el código relacionado y explora la arquitectura actual del proyecto:
+Analiza el código relacionado y explora la arquitectura actual del proyecto:
 
 1. Identifica EXACTAMENTE qué archivos y funciones necesitan modificarse
 2. Lista las dependencias entre componentes que debemos considerar
@@ -50,7 +51,7 @@ Presenta el plan en fases claras con:
   - Impacto: [mínimo/medio/alto]
   - Test: [cómo verificar que funciona]
 
-Recuerda: El objetivo es la SIMPLICIDAD. Si hay múltiples formas de hacerlo, elige la que requiera menos cambios.
+Recuerda: El objetivo es la SIMPLICIDAD. Si hay múltiples formas de hacerlo, elige la que requiera menos cambios, pero para eso es muy importante que ultra analices y Ultra Think el código y la planificacion.
 ```
 
 

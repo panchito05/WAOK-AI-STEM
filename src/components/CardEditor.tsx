@@ -33,7 +33,8 @@ import {
   Pencil,
   Trash2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Clock
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 // Note: generateExamplesForAllLevelsAction is not available in the API client yet
@@ -60,6 +61,8 @@ const formSchema = z.object({
   attemptsPerExercise: z.number().min(1).max(10),
   autoCompensation: z.boolean(),
   adaptiveDifficulty: z.boolean(),
+  timerEnabled: z.boolean(),
+  timerSeconds: z.number().min(10).max(300),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -114,11 +117,14 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
       attemptsPerExercise: card?.attemptsPerExercise || 3,
       autoCompensation: card?.autoCompensation || false,
       adaptiveDifficulty: card?.adaptiveDifficulty || false,
+      timerEnabled: card?.timerEnabled || false,
+      timerSeconds: card?.timerSeconds || 30,
     },
   });
 
   const difficulty = form.watch('difficulty');
   const topic = form.watch('topic');
+  const timerEnabled = form.watch('timerEnabled');
 
   // Correct spelling when topic changes
   useEffect(() => {
@@ -227,7 +233,9 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
           levelExamples: levelExamples,
           structuredExamples: structuredExamples,
           color: finalColor || card.color,
-          icon: finalIcon || card.icon
+          icon: finalIcon || card.icon,
+          timerEnabled: values.timerEnabled,
+          timerSeconds: values.timerSeconds
         });
         
         // Clear cache if topic, difficulty, instructions, or examples changed
@@ -266,7 +274,9 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
           levelExamples: levelExamples,
           structuredExamples: structuredExamples,
           color: finalColor,
-          icon: finalIcon
+          icon: finalIcon,
+          timerEnabled: values.timerEnabled,
+          timerSeconds: values.timerSeconds
         });
         
         // Preload exercises for new card
@@ -790,6 +800,61 @@ export default function CardEditor({ card, onSave, onCancel }: CardEditorProps) 
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="timerEnabled"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Temporizador
+                    </FormLabel>
+                    <FormDescription>
+                      Activar límite de tiempo para cada ejercicio
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {timerEnabled && (
+              <FormField
+                control={form.control}
+                name="timerSeconds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tiempo por ejercicio (segundos)</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={10}
+                          max={300}
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          className="w-24"
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          ({Math.floor(field.value / 60)}:{(field.value % 60).toString().padStart(2, '0')})
+                        </span>
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      Entre 10 y 300 segundos
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="flex gap-3 pt-4">
               {card && (

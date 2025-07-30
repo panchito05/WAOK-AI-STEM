@@ -23,6 +23,7 @@ import { exerciseCache } from '@/lib/exercise-cache';
 import { parseExerciseProblem } from '@/lib/exercise-parser';
 import { usePracticeHistory } from '@/hooks/use-practice-history';
 import { ExerciseDetail } from '@/lib/practice-history';
+import { useExerciseTimer } from '@/hooks/use-exercise-timer';
 
 interface Exercise {
   id: string;
@@ -71,6 +72,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   const [exerciseHistory, setExerciseHistory] = useState<ExerciseDetail[]>([]);
   const [sessionStartTime] = useState<number>(Date.now());
   const [hintsUsedCount, setHintsUsedCount] = useState(0);
+  
+  // Timer auto-restart flag
+  const [timerExpiredFlag, setTimerExpiredFlag] = useState(false);
   
   // Ref for canvas to clear it when needed
   const canvasRef = useRef<{ clearCanvas: () => void }>(null);
@@ -175,6 +179,100 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
 
   const currentExercise = exercises[currentIndex];
   const progress = exercises.length > 0 ? ((currentIndex + 1) / exercises.length) * 100 : 0;
+  
+  // Timer hook
+  const handleTimeUp = () => {
+    if (!showSolution && !isReviewMode) {
+      // Time's up - mark as incorrect
+      toast({
+        title: '⏰ ¡Tiempo agotado!',
+        description: 'Se acabó el tiempo para este ejercicio.',
+        variant: 'destructive',
+      });
+      
+      // Consume an attempt
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      
+      // Mark as incorrect
+      setUserAnswers(prev => ({
+        ...prev,
+        [currentIndex]: {
+          answer: '',
+          isCorrect: false,
+          attempts: newAttempts
+        }
+      }));
+      
+      // Track exercise as failed
+      if (currentExercise) {
+        const timeSpent = Math.round((Date.now() - exerciseStartTime) / 1000);
+        const exerciseDetail: ExerciseDetail = {
+          problem: currentExercise.problem,
+          userAnswer: '',
+          correctAnswer: currentExercise.solution,
+          isCorrect: false,
+          attempts: newAttempts,
+          timeSpent,
+          timestamp: new Date().toISOString(),
+        };
+        
+        const updatedHistory = [...exerciseHistory, exerciseDetail];
+        setExerciseHistory(updatedHistory);
+        
+        if (sessionId) {
+          updateSession(sessionId, updatedHistory);
+        }
+      }
+      
+      // Show solution if no more attempts
+      if (newAttempts >= card.attemptsPerExercise) {
+        setShowSolution(true);
+        setHint(currentExercise?.explanation || '');
+        
+        // Add compensation exercise if enabled
+        if (card.autoCompensation) {
+          addCompensationExercise();
+        }
+      } else {
+        // Si aún quedan intentos, activar flag para reiniciar timer
+        setTimerExpiredFlag(true);
+      }
+    }
+  };
+  
+  const timer = useExerciseTimer({
+    initialSeconds: card.timerSeconds || 30,
+    onTimeUp: handleTimeUp,
+    enabled: (card.timerEnabled || false) && !isReviewMode && !isLoading
+  });
+  
+  // Start timer when exercise changes
+  useEffect(() => {
+    if (currentExercise && card.timerEnabled && !isReviewMode && !showSolution) {
+      timer.reset();
+      // Use setTimeout to ensure state updates have propagated
+      setTimeout(() => {
+        timer.start();
+      }, 50);
+    }
+  }, [currentIndex, currentExercise, card.timerEnabled, isReviewMode, showSolution]);
+  
+  // Stop timer when solution is shown
+  useEffect(() => {
+    if (showSolution) {
+      timer.reset();
+    }
+  }, [showSolution]);
+  
+  // Reiniciar timer cuando se agote pero queden intentos
+  useEffect(() => {
+    if (timerExpiredFlag && attempts < card.attemptsPerExercise) {
+      setTimerExpiredFlag(false);
+      timer.reset();
+      timer.start();
+    }
+  }, [timerExpiredFlag, attempts, card.attemptsPerExercise]);
   
   // Log para detectar cambios no esperados en el ejercicio actual
   useEffect(() => {
@@ -371,6 +469,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
       setShowSolution(false);
       setHint('');
       setFeedback(undefined);
+      setTimerExpiredFlag(false); // Limpiar flag al cambiar de ejercicio
       // Reset exercise start time for next exercise
       setExerciseStartTime(Date.now());
     } else {
@@ -566,6 +665,8 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
                     isReviewMode={isReviewMode}
                     userAnswer={userAnswers[currentIndex]?.answer}
                     onBackToActive={handleBackToActive}
+                    timerSeconds={card.timerEnabled && !showSolution ? timer.timeRemaining : undefined}
+                    timerPercentage={card.timerEnabled && !showSolution ? timer.percentage : undefined}
                   />
                 </>
               );
@@ -594,6 +695,8 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
             onBackToActive={handleBackToActive}
             currentIndex={currentIndex}
             onPrevious={handlePreviousExercise}
+            timerSeconds={card.timerEnabled && !showSolution ? timer.timeRemaining : undefined}
+            timerPercentage={card.timerEnabled && !showSolution ? timer.percentage : undefined}
           />
         </div>
       </div>

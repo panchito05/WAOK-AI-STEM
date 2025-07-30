@@ -29,6 +29,7 @@ import { api } from '@/lib/api-client';
 import { useToast } from '@/hooks/use-toast';
 import { parseExerciseProblem } from '@/lib/exercise-parser';
 import DynamicIcon from './DynamicIcon';
+import { useExerciseTimer } from '@/hooks/use-exercise-timer';
 
 interface MultiPracticeScreenProps {
   type: 'favorites' | 'all';
@@ -49,6 +50,9 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | undefined>();
   const [sessionComplete, setSessionComplete] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  
+  // Timer auto-restart flag
+  const [timerExpiredFlag, setTimerExpiredFlag] = useState(false);
   
   // Ref for canvas to clear it when needed
   const canvasRef = useRef<{ clearCanvas: () => void }>(null);
@@ -109,7 +113,9 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
                 exercise,
                 difficulty: card.difficulty,
                 attemptsPerExercise: card.attemptsPerExercise,
-                autoCompensation: card.autoCompensation
+                autoCompensation: card.autoCompensation,
+                timerEnabled: card.timerEnabled,
+                timerSeconds: card.timerSeconds
               });
             });
             
@@ -127,7 +133,9 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
                 exercise,
                 difficulty: card.difficulty,
                 attemptsPerExercise: card.attemptsPerExercise,
-                autoCompensation: card.autoCompensation
+                autoCompensation: card.autoCompensation,
+                timerEnabled: card.timerEnabled,
+                timerSeconds: card.timerSeconds
               });
             });
             
@@ -190,6 +198,81 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
 
   const currentExercise = session?.exercises[currentIndex];
   const progress = session ? ((currentIndex + 1) / session.exercises.length) * 100 : 0;
+  
+  // Timer hook
+  const handleTimeUp = () => {
+    if (!showSolution && currentExercise && session) {
+      // Time's up - mark as incorrect
+      toast({
+        title: '⏰ ¡Tiempo agotado!',
+        description: 'Se acabó el tiempo para este ejercicio.',
+        variant: 'destructive',
+      });
+      
+      // Consume an attempt
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      
+      // Update session results
+      const updatedSession = { ...session };
+      if (!updatedSession.results[currentExercise.cardId]) {
+        updatedSession.results[currentExercise.cardId] = {
+          cardName: currentExercise.cardName,
+          correct: 0,
+          incorrect: 0,
+          timeSpent: 0,
+          startedAt: new Date().toISOString()
+        };
+      }
+      updatedSession.results[currentExercise.cardId].incorrect++;
+      updatedSession.totalIncorrect++;
+      
+      // Show solution if no more attempts
+      if (newAttempts >= currentExercise.attemptsPerExercise) {
+        setShowSolution(true);
+        setHint(currentExercise.exercise.explanation || '');
+      } else {
+        // Si aún quedan intentos, activar flag para reiniciar timer
+        setTimerExpiredFlag(true);
+      }
+      
+      setSession(updatedSession);
+      multiPracticeStorage.saveSession(updatedSession);
+    }
+  };
+  
+  const timer = useExerciseTimer({
+    initialSeconds: currentExercise?.timerSeconds || 30,
+    onTimeUp: handleTimeUp,
+    enabled: (currentExercise?.timerEnabled || false) && !isLoading && currentExercise
+  });
+  
+  // Start timer when exercise changes
+  useEffect(() => {
+    if (currentExercise && currentExercise.timerEnabled && !showSolution) {
+      timer.reset();
+      // Use setTimeout to ensure state updates have propagated
+      setTimeout(() => {
+        timer.start();
+      }, 50);
+    }
+  }, [currentIndex, currentExercise, showSolution]);
+  
+  // Stop timer when solution is shown
+  useEffect(() => {
+    if (showSolution) {
+      timer.reset();
+    }
+  }, [showSolution]);
+  
+  // Reiniciar timer cuando se agote pero queden intentos
+  useEffect(() => {
+    if (timerExpiredFlag && currentExercise && attempts < currentExercise.attemptsPerExercise) {
+      setTimerExpiredFlag(false);
+      timer.reset();
+      timer.start();
+    }
+  }, [timerExpiredFlag, attempts, currentExercise]);
 
   const handleAnswer = async (answer: string) => {
     if (!currentExercise || !session || showSolution) return;
@@ -278,6 +361,7 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
       setShowSolution(false);
       setHint('');
       setFeedback(undefined);
+      setTimerExpiredFlag(false); // Limpiar flag al cambiar de ejercicio
       
       // Update session index
       multiPracticeStorage.updateProgress(session.id, newIndex, '', false);
@@ -531,6 +615,24 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
                     onClear={handleClearCanvas}
                     height={500}
                     operationText={parsed.operation || currentExercise.exercise.problem}
+                    onSubmitAnswer={handleAnswer}
+                    attempts={attempts}
+                    maxAttempts={currentExercise.attemptsPerExercise}
+                    showSolution={showSolution}
+                    feedback={feedback}
+                    solution={currentExercise.exercise.solution}
+                    hint={hint}
+                    onNext={handleNextExercise}
+                    isLastExercise={currentIndex === session.exercises.length - 1}
+                    cardId={currentExercise.cardId}
+                    currentIndex={currentIndex}
+                    totalExercises={session.exercises.length}
+                    correctAnswers={session.totalCorrect}
+                    topic={currentExercise.cardTopic}
+                    difficulty={currentExercise.difficulty}
+                    onRevealSolution={handleRevealSolution}
+                    timerSeconds={currentExercise.timerEnabled && !showSolution ? timer.timeRemaining : undefined}
+                    timerPercentage={currentExercise.timerEnabled && !showSolution ? timer.percentage : undefined}
                   />
                 </>
               );
@@ -554,6 +656,8 @@ export default function MultiPracticeScreen({ type, onBack }: MultiPracticeScree
             autoCompensation={currentExercise.autoCompensation}
             cardId={currentExercise.cardId}
             hasModalOpen={false}
+            timerSeconds={currentExercise.timerEnabled && !showSolution ? timer.timeRemaining : undefined}
+            timerPercentage={currentExercise.timerEnabled && !showSolution ? timer.percentage : undefined}
           />
         </div>
       </div>

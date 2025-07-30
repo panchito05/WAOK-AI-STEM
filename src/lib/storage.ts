@@ -29,6 +29,8 @@ export interface PracticeCard {
   structuredExamples?: {
     [level: number]: StructuredExample[]; // Nueva estructura con formato completo
   };
+  timerEnabled?: boolean; // Enable timer for this card
+  timerSeconds?: number; // Timer duration in seconds (10-300)
 }
 
 // Interfaces para práctica múltiple
@@ -47,6 +49,8 @@ export interface MultiPracticeExercise {
   difficulty: number;
   attemptsPerExercise: number;
   autoCompensation: boolean;
+  timerEnabled?: boolean;
+  timerSeconds?: number;
 }
 
 export interface MultiPracticeSession {

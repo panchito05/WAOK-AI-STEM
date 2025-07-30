@@ -112,3 +112,75 @@ export function parseExerciseProblem(problem: string): ParsedExercise {
     operation: trimmedProblem 
   };
 }
+
+/**
+ * Detects the type of mathematical operation in a problem string
+ * 
+ * @param problem - The problem text to analyze
+ * @returns The operation type or null if not detected
+ * 
+ * Examples:
+ * - "25 + 17 = ?" → "suma"
+ * - "45 - 23 = ?" → "resta"
+ * - "7 × 4 = ?" → "multiplicación"
+ * - "36 ÷ 6 = ?" → "división"
+ */
+export function detectOperationType(problem: string): 'suma' | 'resta' | 'multiplicación' | 'división' | null {
+  if (!problem) return null;
+
+  const normalizedProblem = problem.toLowerCase();
+
+  // Check for addition
+  if (normalizedProblem.includes('+')) {
+    return 'suma';
+  }
+
+  // Check for subtraction
+  if (normalizedProblem.includes('-')) {
+    // Make sure it's not a negative number
+    const minusIndex = normalizedProblem.indexOf('-');
+    if (minusIndex > 0 && /\d/.test(normalizedProblem[minusIndex - 1])) {
+      return 'resta';
+    }
+  }
+
+  // Check for multiplication (various symbols)
+  if (normalizedProblem.includes('×') || 
+      normalizedProblem.includes('x') || 
+      normalizedProblem.includes('*')) {
+    // Make sure 'x' is used as multiplication, not as variable
+    if (normalizedProblem.includes('x')) {
+      const xIndex = normalizedProblem.indexOf('x');
+      const hasNumberBefore = xIndex > 0 && /\d/.test(normalizedProblem[xIndex - 1]);
+      const hasNumberAfter = xIndex < normalizedProblem.length - 1 && /\d/.test(normalizedProblem[xIndex + 1]);
+      if (hasNumberBefore || hasNumberAfter) {
+        return 'multiplicación';
+      }
+    } else {
+      return 'multiplicación';
+    }
+  }
+
+  // Check for division (various symbols)
+  if (normalizedProblem.includes('÷') || 
+      normalizedProblem.includes('/') ||
+      normalizedProblem.includes(':')) {
+    return 'división';
+  }
+
+  // Check by topic keywords in the problem text
+  const topicKeywords = {
+    suma: ['suma', 'sumar', 'agregar', 'añadir', 'total', 'juntos', 'más'],
+    resta: ['resta', 'restar', 'quitar', 'diferencia', 'menos', 'quedan'],
+    multiplicación: ['multiplica', 'multiplicar', 'veces', 'producto', 'por'],
+    división: ['divide', 'dividir', 'repartir', 'entre', 'cociente', 'mitad', 'tercio', 'cuarto']
+  };
+
+  for (const [operation, keywords] of Object.entries(topicKeywords)) {
+    if (keywords.some(keyword => normalizedProblem.includes(keyword))) {
+      return operation as 'suma' | 'resta' | 'multiplicación' | 'división';
+    }
+  }
+
+  return null;
+}
