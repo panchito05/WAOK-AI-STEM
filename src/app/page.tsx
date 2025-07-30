@@ -7,9 +7,10 @@ import CardsList from '@/components/CardsList';
 import CardEditor from '@/components/CardEditor';
 import PracticeScreen from '@/components/PracticeScreen';
 import MultiPracticeScreen from '@/components/MultiPracticeScreen';
+import SudokuScreen from '@/components/sudoku/SudokuScreen';
 import { PracticeCard } from '@/lib/storage';
 
-type ViewMode = 'list' | 'practice' | 'edit' | 'multi-practice';
+type ViewMode = 'list' | 'practice' | 'edit' | 'multi-practice' | 'sudoku';
 
 export default function Home() {
   const searchParams = useSearchParams();
@@ -61,8 +62,12 @@ export default function Home() {
   }
 
   const handleSelectCard = (card: PracticeCard) => {
-    setSelectedCard(card);
-    setCurrentView('practice');
+    if (card.type === 'module' && card.id === 'sudoku-module') {
+      setCurrentView('sudoku');
+    } else {
+      setSelectedCard(card);
+      setCurrentView('practice');
+    }
   };
 
   const handleCreateCard = () => {
@@ -126,6 +131,12 @@ export default function Home() {
           {currentView === 'multi-practice' && (
             <MultiPracticeScreen
               type={multiPracticeType}
+              onBack={handleBackToList}
+            />
+          )}
+          
+          {currentView === 'sudoku' && (
+            <SudokuScreen
               onBack={handleBackToList}
             />
           )}

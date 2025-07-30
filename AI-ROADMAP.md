@@ -5,3 +5,5 @@ Agregar un sistema que permita que se guardala respuesta y lo que se dibujo en e
 
 
 el canvas el lienzo debe limpiarse cuando paso de un ejercicio a otro eso debe ser de forma automatica y no manual
+
+que debe pasar al precionar el boton finalizar sesion cuando se completan todos los ejercicios de un session ?

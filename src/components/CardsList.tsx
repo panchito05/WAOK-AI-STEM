@@ -24,7 +24,8 @@ import {
   Eye,
   Shuffle,
   Search,
-  X
+  X,
+  Puzzle
 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { PracticeCard } from '@/lib/storage';
@@ -375,10 +376,16 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-lg">{card.topic}</CardTitle>
-                    {poolStatus.ready && (
+                    {poolStatus.ready && card.type !== 'module' && (
                       <Badge variant="secondary" className="gap-1">
                         <Zap className="h-3 w-3" />
                         Listo
+                      </Badge>
+                    )}
+                    {card.type === 'module' && (
+                      <Badge variant="secondary" className="gap-1 bg-indigo-100 text-indigo-700">
+                        <Puzzle className="h-3 w-3" />
+                        Módulo
                       </Badge>
                     )}
                   </div>
@@ -421,14 +428,29 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <BookOpen className="h-3 w-3" />
-                  <span>{card.exerciseCount} ejercicios</span>
-                </div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Target className="h-3 w-3" />
-                  <span>{card.attemptsPerExercise} intentos</span>
-                </div>
+                {card.type !== 'module' ? (
+                  <>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <BookOpen className="h-3 w-3" />
+                      <span>{card.exerciseCount} ejercicios</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Target className="h-3 w-3" />
+                      <span>{card.attemptsPerExercise} intentos</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Puzzle className="h-3 w-3" />
+                      <span>3 variantes</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Target className="h-3 w-3" />
+                      <span>3 niveles</span>
+                    </div>
+                  </>
+                )}
                 {card.levelExamples && Object.keys(card.levelExamples).length > 0 && (
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Sparkles className="h-3 w-3" />
@@ -452,19 +474,21 @@ export default function CardsList({ onSelectCard, onCreateCard, onEditCard, onMu
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => onEditCard(card)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
+                {card.type !== 'module' && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => onEditCard(card)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button 
                   className="flex-1"
                   onClick={() => onSelectCard(card)}
                 >
                   <Play className="mr-2 h-4 w-4" />
-                  {exerciseCache.getPoolStatus(card.id).ready ? 'Practicar' : 'Usar'}
+                  {card.type === 'module' ? 'Jugar' : (exerciseCache.getPoolStatus(card.id).ready ? 'Practicar' : 'Usar')}
                 </Button>
               </div>
             </CardContent>

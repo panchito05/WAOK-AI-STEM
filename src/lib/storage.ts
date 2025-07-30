@@ -10,6 +10,7 @@ import { getCurrentProfileStorageKey, profilesStorage } from './profiles';
 
 export interface PracticeCard {
   id: string;
+  type?: 'practice' | 'module'; // Tipo de tarjeta: práctica normal o módulo especial
   name: string;
   topic: string;
   difficulty: number; // 1-10

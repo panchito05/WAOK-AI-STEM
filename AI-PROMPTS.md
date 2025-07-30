@@ -42,6 +42,8 @@ Presenta el plan en fases claras con:
   -identifica qsi algun subagente el mejor que tu para esa tarea y si es el caso dime cual es el nombre del subagente y para que parte de la implementacion lo usaras
 
 Recuerda: El objetivo es la SIMPLICIDAD. Si hay múltiples formas de hacerlo, elige la que requiera menos cambios, pero para eso es muy importante que ultra analices y Ultra Think el código y la planificacion.
+
+Luego empieza la implementacion y no te detengas hasta completarlo verifica si alguno de los subagentes te puede ayudar con esas implementacion siempre y cuando sea un experto mejor que tu en esa tarea que le podrias delegar
 ```
 
 

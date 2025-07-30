@@ -33,16 +33,47 @@ export function useCards() {
     setIsLoading(true);
     try {
       const storedCards = cardStorage.getAll();
-      setCards(storedCards);
       
-      if (storedCards.length > 0) {
+      // Crear tarjeta Sudoku predefinida si no existe
+      const sudokuCard: PracticeCard = {
+        id: 'sudoku-module',
+        type: 'module',
+        name: 'Sudoku Educativo',
+        topic: 'Sudoku',
+        difficulty: 5,
+        customInstructions: 'Módulo de Sudoku con 3 variantes: Clásico 9x9, Dosdoku 4x4 y 6x6',
+        exerciseCount: 0, // No aplica para módulos
+        attemptsPerExercise: 0, // No aplica para módulos
+        autoCompensation: false,
+        adaptiveDifficulty: false,
+        isFavorite: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        color: '#6366f1', // Indigo
+        icon: 'Grid3x3',
+        timerEnabled: true,
+        timerSeconds: 0, // El módulo maneja su propio timer
+      };
+      
+      // Verificar si ya existe la tarjeta Sudoku
+      const hasSudokuCard = storedCards.some(card => card.id === 'sudoku-module');
+      
+      // Combinar tarjetas almacenadas con módulos predefinidos
+      const allCards = hasSudokuCard ? storedCards : [...storedCards, sudokuCard];
+      
+      setCards(allCards);
+      
+      if (allCards.length > 0) {
         
-        // Preload exercises with intelligent prioritization
+        // Preload exercises with intelligent prioritization (solo para tarjetas de práctica)
         console.log('Starting intelligent exercise preloading...');
         
+        // Filtrar solo tarjetas de práctica (no módulos)
+        const practiceCards = allCards.filter(card => card.type !== 'module');
+        
         // Separar tarjetas por prioridad
-        const favoriteCards = storedCards.filter(card => card.isFavorite);
-        const regularCards = storedCards.filter(card => !card.isFavorite);
+        const favoriteCards = practiceCards.filter(card => card.isFavorite);
+        const regularCards = practiceCards.filter(card => !card.isFavorite);
         
         // Precargar favoritos primero con más ejercicios
         favoriteCards.forEach(async (card) => {

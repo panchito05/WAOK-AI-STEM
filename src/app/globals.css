@@ -86,3 +86,15 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Animaciones para Sudoku */
+@keyframes fall {
+  to {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-fall {
+  animation: fall linear forwards;
+}
