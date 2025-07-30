@@ -151,15 +151,18 @@ function shuffleDirections(): Direction[] {
  */
 function addComplexity(maze: MazeCell[][], size: number, complexity: number): void {
   let removed = 0; // Declare at function scope
+  let loopsCreated = 0;
+  let branchesCreated = 0;
   
-  // For high complexity (difficulty > 0.9), create many loops and dead ends
+  // For high complexity (difficulty > 0.9), create strategic loops and dead ends
   if (complexity > 0.9) {
-    const wallsToRemove = Math.floor(size * size * 0.15); // Remove 15% of walls for very complex maze
+    // Much more conservative: only 2-3% of walls for large mazes
+    const maxLoops = Math.min(5, Math.floor(size * 0.2)); // Max 5 loops for a 20x20 maze
     
-    // First pass: Create multiple loops by removing walls between paths
-    for (let attempts = 0; attempts < wallsToRemove * 20 && removed < wallsToRemove; attempts++) {
-      const row = 1 + Math.floor(Math.random() * (size - 2));
-      const col = 1 + Math.floor(Math.random() * (size - 2));
+    // First pass: Create a few strategic loops by removing walls between paths
+    for (let attempts = 0; attempts < 1000 && loopsCreated < maxLoops; attempts++) {
+      const row = 2 + Math.floor(Math.random() * (size - 4));
+      const col = 2 + Math.floor(Math.random() * (size - 4));
       
       if (maze[row][col].type === 'wall') {
         // Check if this wall is between two empty cells (creates loops)
@@ -170,22 +173,43 @@ function addComplexity(maze: MazeCell[][], size: number, complexity: number): vo
           maze[row][col - 1].type !== 'wall' && 
           maze[row][col + 1].type !== 'wall';
         
+        // Additional check: ensure we're not creating large open spaces
         if (horizontalPath || verticalPath) {
-          maze[row][col].type = 'empty';
-          removed++;
+          // Check surrounding area to prevent creating open spaces
+          let openNeighbors = 0;
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              const nr = row + dr;
+              const nc = col + dc;
+              if (nr >= 0 && nr < size && nc >= 0 && nc < size && 
+                  maze[nr][nc].type !== 'wall') {
+                openNeighbors++;
+              }
+            }
+          }
+          
+          // Only create loop if it won't create a large open area
+          if (openNeighbors <= 3) {
+            maze[row][col].type = 'empty';
+            loopsCreated++;
+            removed++;
+          }
         }
       }
     }
     
-    // Second pass: Create dead-end branches
-    const branches = Math.floor(size * complexity * 0.5);
-    for (let i = 0; i < branches; i++) {
-      const row = 1 + Math.floor(Math.random() * (size - 2));
-      const col = 1 + Math.floor(Math.random() * (size - 2));
+    // Second pass: Create small dead-end branches
+    const maxBranches = Math.min(3, Math.floor(size * 0.1)); // Max 3 branches for complexity
+    
+    for (let attempts = 0; attempts < 500 && branchesCreated < maxBranches; attempts++) {
+      const row = 2 + Math.floor(Math.random() * (size - 4));
+      const col = 2 + Math.floor(Math.random() * (size - 4));
       
       if (maze[row][col].type === 'wall') {
         // Count adjacent empty cells
         let emptyCount = 0;
+        let emptyNeighbor = null;
         const neighbors = [
           { r: row - 1, c: col },
           { r: row + 1, c: col },
@@ -197,55 +221,96 @@ function addComplexity(maze: MazeCell[][], size: number, complexity: number): vo
           if (n.r >= 0 && n.r < size && n.c >= 0 && n.c < size) {
             if (maze[n.r][n.c].type !== 'wall') {
               emptyCount++;
+              emptyNeighbor = n;
             }
           }
         }
         
         // Create dead-end branch if only one adjacent path
-        if (emptyCount === 1) {
-          maze[row][col].type = 'empty';
+        if (emptyCount === 1 && emptyNeighbor) {
+          // Verify this won't create an open space
+          let willCreateOpenSpace = false;
           
-          // Extend the branch randomly
-          let branchLength = Math.floor(Math.random() * 3) + 1;
-          let currentRow = row;
-          let currentCol = col;
-          
-          for (let j = 0; j < branchLength; j++) {
-            const directions = shuffleArray([...DIRECTION_KEYS]);
-            let extended = false;
-            
-            for (const dir of directions) {
-              const delta = DIRECTIONS[dir];
-              const nextRow = currentRow + delta.row / 2; // Use step of 1 for branches
-              const nextCol = currentCol + delta.col / 2;
-              
-              if (nextRow > 0 && nextRow < size - 1 && 
-                  nextCol > 0 && nextCol < size - 1 &&
-                  maze[nextRow][nextCol].type === 'wall') {
-                
-                // Check if we can extend without creating loops
-                let adjacentPaths = 0;
-                for (const n of neighbors) {
-                  const checkRow = nextRow + n.r - row;
-                  const checkCol = nextCol + n.c - col;
+          // Check if creating this branch would form a 2x2 open area
+          for (let dr = -1; dr <= 0; dr++) {
+            for (let dc = -1; dc <= 0; dc++) {
+              let openCount = 0;
+              for (let r = 0; r < 2; r++) {
+                for (let c = 0; c < 2; c++) {
+                  const checkRow = row + dr + r;
+                  const checkCol = col + dc + c;
                   if (checkRow >= 0 && checkRow < size && checkCol >= 0 && checkCol < size) {
-                    if (maze[checkRow][checkCol].type !== 'wall') {
-                      adjacentPaths++;
+                    if ((checkRow === row && checkCol === col) || 
+                        maze[checkRow][checkCol].type !== 'wall') {
+                      openCount++;
                     }
                   }
                 }
-                
-                if (adjacentPaths <= 1) {
-                  maze[nextRow][nextCol].type = 'empty';
-                  currentRow = nextRow;
-                  currentCol = nextCol;
-                  extended = true;
-                  break;
-                }
+              }
+              if (openCount >= 4) {
+                willCreateOpenSpace = true;
+                break;
               }
             }
+            if (willCreateOpenSpace) break;
+          }
+          
+          if (!willCreateOpenSpace) {
+            maze[row][col].type = 'empty';
+            branchesCreated++;
+            removed++;
             
-            if (!extended) break;
+            // Create a very short branch (1-2 cells max)
+            const branchLength = Math.random() < 0.7 ? 1 : 2;
+            let currentRow = row;
+            let currentCol = col;
+            
+            for (let j = 0; j < branchLength; j++) {
+              // Find valid direction to extend
+              let extended = false;
+              for (const dir of DIRECTION_KEYS) {
+                const delta = DIRECTIONS[dir];
+                const nextRow = currentRow + delta.row / 2;
+                const nextCol = currentCol + delta.col / 2;
+                
+                // Skip the direction we came from
+                if (nextRow === emptyNeighbor.r && nextCol === emptyNeighbor.c) continue;
+                
+                if (nextRow > 1 && nextRow < size - 2 && 
+                    nextCol > 1 && nextCol < size - 2 &&
+                    maze[nextRow][nextCol].type === 'wall') {
+                  
+                  // Ensure extending won't create connections or open spaces
+                  let adjacentEmpty = 0;
+                  const nextNeighbors = [
+                    { r: nextRow - 1, c: nextCol },
+                    { r: nextRow + 1, c: nextCol },
+                    { r: nextRow, c: nextCol - 1 },
+                    { r: nextRow, c: nextCol + 1 }
+                  ];
+                  for (const n of nextNeighbors) {
+                    if (n.r >= 0 && n.r < size && n.c >= 0 && n.c < size) {
+                      if (maze[n.r][n.c].type !== 'wall' || 
+                          (n.r === currentRow && n.c === currentCol)) {
+                        adjacentEmpty++;
+                      }
+                    }
+                  }
+                  
+                  // Only extend if it maintains dead-end property
+                  if (adjacentEmpty <= 1) {
+                    maze[nextRow][nextCol].type = 'empty';
+                    currentRow = nextRow;
+                    currentCol = nextCol;
+                    removed++;
+                    extended = true;
+                    break;
+                  }
+                }
+              }
+              
+              if (!extended) break;
+            }
           }
         }
       }
@@ -285,7 +350,11 @@ function addComplexity(maze: MazeCell[][], size: number, complexity: number): vo
     }
   }
   
-  console.log(`Added complexity: removed ${removed} walls`);
+  if (complexity > 0.9) {
+    console.log(`Added complexity (hard mode): created ${loopsCreated || 0} loops and ${branchesCreated || 0} branches (${removed} walls removed)`);
+  } else {
+    console.log(`Added complexity: removed ${removed} walls`);
+  }
 }
 
 /**
