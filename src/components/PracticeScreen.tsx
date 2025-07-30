@@ -24,6 +24,8 @@ import { parseExerciseProblem } from '@/lib/exercise-parser';
 import { usePracticeHistory } from '@/hooks/use-practice-history';
 import { ExerciseDetail } from '@/lib/practice-history';
 import { useExerciseTimer } from '@/hooks/use-exercise-timer';
+import { canvasCapturesStorage } from '@/lib/canvas-captures';
+import { profilesStorage } from '@/lib/profiles';
 
 interface Exercise {
   id: string;
@@ -65,6 +67,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   }>>({});
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0); // índice del problema activo (no en revisión)
+  const [reviewCapture, setReviewCapture] = useState<any>(null); // Canvas capture for review mode
   
   // Practice history tracking
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -77,7 +80,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   const [timerExpiredFlag, setTimerExpiredFlag] = useState(false);
   
   // Ref for canvas to clear it when needed
-  const canvasRef = useRef<{ clearCanvas: () => void }>(null);
+  const canvasRef = useRef<{ clearCanvas: () => void; getLines: () => any[] }>(null);
 
   // Load exercises once on mount
   useEffect(() => {
@@ -180,6 +183,43 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   const currentExercise = exercises[currentIndex];
   const progress = exercises.length > 0 ? ((currentIndex + 1) / exercises.length) * 100 : 0;
   
+  // Helper function to capture canvas state
+  const captureCanvasState = (isCorrect: boolean, userAnswer: string, attempts: number) => {
+    if (!canvasRef.current || !currentExercise) return;
+    
+    try {
+      const lines = canvasRef.current.getLines();
+      const profile = profilesStorage.getActiveProfile();
+      
+      if (lines.length > 0 && profile) {
+        // Determine operation type
+        const operationType = card.topic.toLowerCase().includes('suma') ? 'suma' :
+                            card.topic.toLowerCase().includes('resta') ? 'resta' :
+                            card.topic.toLowerCase().includes('multiplicaci') ? 'multiplicacion' :
+                            card.topic.toLowerCase().includes('divisi') ? 'division' : 'otro';
+        
+        canvasCapturesStorage.save({
+          cardId: card.id,
+          cardName: card.name,
+          cardTopic: card.topic,
+          operationType,
+          profileId: profile.id,
+          timestamp: new Date().toISOString(),
+          exerciseProblem: currentExercise.problem,
+          userAnswer,
+          correctAnswer: currentExercise.solution,
+          isCorrect,
+          attempts,
+          lines,
+          canvasWidth: 800, // You may want to get actual canvas dimensions
+          canvasHeight: 500,
+        });
+      }
+    } catch (error) {
+      console.error('Error capturing canvas state:', error);
+    }
+  };
+  
   // Timer hook
   const handleTimeUp = () => {
     if (!showSolution && !isReviewMode) {
@@ -227,6 +267,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
       
       // Show solution if no more attempts
       if (newAttempts >= card.attemptsPerExercise) {
+        // Capture canvas state before showing solution
+        captureCanvasState(false, '', newAttempts);
+        
         setShowSolution(true);
         setHint(currentExercise?.explanation || '');
         
@@ -335,6 +378,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
         }
         
         if (result.data.isCorrect) {
+          // Capture canvas state before clearing
+          captureCanvasState(true, answer, newAttempts);
+          
           // Clear the canvas when answer is correct
           canvasRef.current?.clearCanvas();
           
@@ -361,7 +407,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
             }, 5000); // 5 seconds to ensure toast is fully shown
           }
         } else if (newAttempts >= card.attemptsPerExercise) {
-          // No more attempts
+          // No more attempts - capture canvas state
+          captureCanvasState(false, answer, newAttempts);
+          
           setConsecutiveCorrect(0); // Reset consecutive counter
           setShowSolution(true);
           setHint(currentExercise.explanation);
@@ -395,6 +443,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   };
 
   const handleRevealSolution = () => {
+    // Capture canvas state before revealing solution
+    captureCanvasState(false, '', attempts + 1);
+    
     setShowSolution(true);
     setHint(currentExercise?.explanation || '');
     
@@ -441,7 +492,18 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
       setActiveIndex(currentIndex);
     }
     setIsReviewMode(true);
-    setCurrentIndex(currentIndex - 1);
+    const targetIndex = currentIndex - 1;
+    setCurrentIndex(targetIndex);
+    
+    // Load canvas capture for the previous exercise
+    if (exercises[targetIndex]) {
+      const captures = canvasCapturesStorage.getByCard(card.id);
+      const capture = captures.find(c => 
+        c.exerciseProblem === exercises[targetIndex].problem
+      );
+      setReviewCapture(capture || null);
+    }
+    
     // Limpiar estados temporales
     setAttempts(0);
     setShowSolution(true);
@@ -452,6 +514,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   const handleBackToActive = () => {
     setIsReviewMode(false);
     setCurrentIndex(activeIndex);
+    setReviewCapture(null); // Clear review capture
     // Restaurar estados del problema activo
     setShowSolution(false);
     setAttempts(0);
@@ -563,7 +626,18 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
               variant="outline" 
               size="sm"
               onClick={() => {
-                setCurrentIndex(currentIndex + 1);
+                const targetIndex = currentIndex + 1;
+                setCurrentIndex(targetIndex);
+                
+                // Load canvas capture for this exercise
+                if (exercises[targetIndex]) {
+                  const captures = canvasCapturesStorage.getByCard(card.id);
+                  const capture = captures.find(c => 
+                    c.exerciseProblem === exercises[targetIndex].problem
+                  );
+                  setReviewCapture(capture || null);
+                }
+                
                 setAttempts(0);
                 setShowSolution(true);
                 setFeedback(undefined);
@@ -667,6 +741,7 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
                     onBackToActive={handleBackToActive}
                     timerSeconds={card.timerEnabled && !showSolution ? timer.timeRemaining : undefined}
                     timerPercentage={card.timerEnabled && !showSolution ? timer.percentage : undefined}
+                    initialLines={isReviewMode && reviewCapture ? reviewCapture.lines : undefined}
                   />
                 </>
               );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowLeft, Download, Trash2, Calendar, TrendingUp, Award, BarChart } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, Calendar, TrendingUp, Award, BarChart, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import ProgressCharts from '@/components/ProgressCharts';
 import SessionHistory from '@/components/SessionHistory';
 import AchievementsList from '@/components/AchievementsList';
+import CanvasCapturesView from '@/components/CanvasCapturesView';
 import { progressStats } from '@/lib/progress-stats';
 
 export default function ProgressPage() {
@@ -236,7 +237,7 @@ export default function ProgressPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-5 w-full">
             <TabsTrigger value="overview" className="gap-2">
               <BarChart className="h-4 w-4" />
               Vista General
@@ -248,6 +249,10 @@ export default function ProgressPage() {
             <TabsTrigger value="history" className="gap-2">
               <Calendar className="h-4 w-4" />
               Historial
+            </TabsTrigger>
+            <TabsTrigger value="captures" className="gap-2">
+              <Image className="h-4 w-4" />
+              Capturas
             </TabsTrigger>
             <TabsTrigger value="achievements" className="gap-2">
               <Award className="h-4 w-4" />
@@ -301,6 +306,10 @@ export default function ProgressPage() {
 
           <TabsContent value="history" className="space-y-4">
             <SessionHistory sessions={recentSessions} />
+          </TabsContent>
+
+          <TabsContent value="captures" className="space-y-4">
+            <CanvasCapturesView />
           </TabsContent>
 
           <TabsContent value="achievements" className="space-y-4">

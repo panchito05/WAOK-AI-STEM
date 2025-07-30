@@ -56,6 +56,8 @@ interface DrawingCanvasSimpleProps {
   // Timer props
   timerSeconds?: number;
   timerPercentage?: number;
+  // Initial lines for loading saved drawings
+  initialLines?: Line[];
 }
 
 const COLORS = [
@@ -63,7 +65,7 @@ const COLORS = [
 ];
 
 const DrawingCanvasSimple = forwardRef<
-  { clearCanvas: () => void },
+  { clearCanvas: () => void; getLines: () => Line[] },
   DrawingCanvasSimpleProps
 >(({ 
   onClear, 
@@ -90,9 +92,10 @@ const DrawingCanvasSimple = forwardRef<
   onBackToActive,
   timerSeconds,
   timerPercentage,
+  initialLines,
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [lines, setLines] = useState<Line[]>([]);
+  const [lines, setLines] = useState<Line[]>(initialLines || []);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentColor, setCurrentColor] = useState(COLORS[0]);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
@@ -204,6 +207,13 @@ const DrawingCanvasSimple = forwardRef<
   useEffect(() => {
     setTextPosition({ x: 0.5, y: 0.1 });
   }, [isFullscreen]);
+  
+  // Update lines when initialLines change (for review mode)
+  useEffect(() => {
+    if (initialLines) {
+      setLines(initialLines);
+    }
+  }, [initialLines]);
 
   const getCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -287,7 +297,12 @@ const DrawingCanvasSimple = forwardRef<
   };
 
   const handleClear = () => {
-    setLines([]);
+    // In review mode, don't clear initial lines
+    if (isReviewMode && initialLines) {
+      setLines(initialLines);
+    } else {
+      setLines([]);
+    }
     setTextPosition({ x: 0.5, y: 0.1 });
     // Redraw is triggered by state updates
     const canvas = canvasRef.current;
@@ -306,8 +321,9 @@ const DrawingCanvasSimple = forwardRef<
 
   // Expose clearCanvas method to parent components
   useImperativeHandle(ref, () => ({
-    clearCanvas: handleClear
-  }), []);
+    clearCanvas: handleClear,
+    getLines: () => lines
+  }), [lines]);
 
   const handleDownload = () => {
     const canvas = canvasRef.current;

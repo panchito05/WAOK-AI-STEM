@@ -1,19 +1,8 @@
 # 🤖 AI-PROMPTS - Biblioteca de Prompts para Desarrollo
 
-## 📋 Índice de Categorías
-1. [Análisis y Planificación](#análisis-y-planificación)
-2. [Implementación de Features](#implementación-de-features)
-3. [Debugging y Solución de Problemas](#debugging-y-solución-de-problemas)
-4. [Implementación de Pruebas](#implementación-de-pruebas)
-5. [Seguridad](#seguridad)
-
 claude --dangerously-skip-permissions
 
 ═══════════════════════════════════════════════════════════════════════════════
-
-## 🔍 Análisis y Planificación
-
-────────────────────────────────────────────────────────────────────────
 
 ### Prompt: Confirmación de Entendimiento
 ```
@@ -50,6 +39,7 @@ Presenta el plan en fases claras con:
   - Cambio: [descripción específica]
   - Impacto: [mínimo/medio/alto]
   - Test: [cómo verificar que funciona]
+  -identifica qsi algun subagente el mejor que tu para esa tarea y si es el caso dime cual es el nombre del subagente y para que parte de la implementacion lo usaras
 
 Recuerda: El objetivo es la SIMPLICIDAD. Si hay múltiples formas de hacerlo, elige la que requiera menos cambios, pero para eso es muy importante que ultra analices y Ultra Think el código y la planificacion.
 ```
