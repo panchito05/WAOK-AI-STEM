@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Drag & Drop Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f0f0f0;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        
+        .demo-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #42A5F5;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .implementation-flow {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .flow-step {
+            background: #E3F2FD;
+            padding: 10px 20px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        
+        .arrow {
+            color: #42A5F5;
+            font-size: 24px;
+        }
+        
+        .highlight {
+            background: #FFB74D;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Maze Game - Drag & Drop Implementation</h1>
+    
+    <div class="demo-section">
+        <h2>✨ Features Implemented</h2>
+        <div class="feature-list">
+            <div class="feature-card">
+                <h3>🖱️ Mouse Drag Support</h3>
+                <p>Click and drag the player character to move through valid maze paths</p>
+            </div>
+            <div class="feature-card">
+                <h3>📱 Touch Support</h3>
+                <p>Full touch support for mobile devices - drag with your finger</p>
+            </div>
+            <div class="feature-card">
+                <h3>🚧 Path Validation</h3>
+                <p>Player can only move through valid paths - no wall crossing</p>
+            </div>
+            <div class="feature-card">
+                <h3>✨ Visual Feedback</h3>
+                <p>Cursor changes, scale effect on drag, smooth transitions</p>
+            </div>
+            <div class="feature-card">
+                <h3>⚡ Performance</h3>
+                <p>Optimized for smooth 60fps dragging even on large mazes</p>
+            </div>
+            <div class="feature-card">
+                <h3>🎯 Smart Movement</h3>
+                <p>Automatically moves through cells as you drag across them</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <h2>🔧 Implementation Architecture</h2>
+        <div class="implementation-flow">
+            <div class="flow-step">useMazeDrag Hook</div>
+            <span class="arrow">→</span>
+            <div class="flow-step">Track Drag State</div>
+            <span class="arrow">→</span>
+            <div class="flow-step">Validate Moves</div>
+            <span class="arrow">→</span>
+            <div class="flow-step">Call onMove()</div>
+        </div>
+        
+        <h3>Key Components:</h3>
+        <ul>
+            <li><span class="highlight">useMazeDrag</span> - Custom React hook handling all drag logic</li>
+            <li><span class="highlight">MazeBoard</span> - Updated to use drag hook and render draggable player</li>
+            <li><span class="highlight">Position tracking</span> - Converts between pixel and grid coordinates</li>
+            <li><span class="highlight">Path validation</span> - Ensures only valid adjacent moves</li>
+        </ul>
+    </div>
+    
+    <div class="demo-section">
+        <h2>📝 Code Highlights</h2>
+        
+        <h3>Player Component with Drag Support:</h3>
+        <div class="code-block">
+&lt;div 
+  className={cn(
+    "absolute inset-0 flex items-center justify-center",
+    !isDragging && "animate-bounce"
+  )}
+  style={{
+    transform: dragTransform 
+      ? `translate(${dragTransform.x}px, ${dragTransform.y}px) scale(${isDragging ? 1.1 : 1})`
+      : 'scale(1)',
+    transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+    cursor: isDragging ? 'grabbing' : 'grab',
+    zIndex: isDragging ? 50 : 10,
+  }}
+  onMouseDown={handleDragStart}
+  onTouchStart={handleDragStart}
+&gt;
+  &lt;div className="w-3/4 h-3/4 bg-blue-500 rounded-full relative shadow-lg"&gt;
+    {/* Smiley face */}
+  &lt;/div&gt;
+&lt;/div&gt;
+        </div>
+        
+        <h3>Movement Validation:</h3>
+        <div class="code-block">
+// Check if positions are adjacent (not diagonal)
+const rowDiff = Math.abs(from.row - to.row);
+const colDiff = Math.abs(from.col - to.col);
+
+if (rowDiff + colDiff !== 1) {
+  return false; // Not adjacent
+}
+
+// Check if target is not a wall
+const targetCell = maze[to.row]?.[to.col];
+return targetCell && targetCell.type !== 'wall';
+        </div>
+    </div>
+    
+    <div class="demo-section">
+        <h2>🎮 How to Use</h2>
+        <ol>
+            <li><strong>Desktop:</strong> Click and hold on the blue player character, then drag to move</li>
+            <li><strong>Mobile:</strong> Touch and drag the player character</li>
+            <li><strong>Movement:</strong> The player will automatically move through valid paths as you drag</li>
+            <li><strong>Visual Feedback:</strong> 
+                <ul>
+                    <li>Cursor changes to "grab" when hovering</li>
+                    <li>Changes to "grabbing" while dragging</li>
+                    <li>Player scales up slightly when being dragged</li>
+                    <li>Smooth transitions when releasing</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+    
+    <div class="demo-section">
+        <h2>🚀 Performance Optimizations</h2>
+        <ul>
+            <li>Global event listeners only active during drag</li>
+            <li>Efficient grid-to-pixel coordinate conversion</li>
+            <li>Memoized callbacks to prevent re-renders</li>
+            <li>CSS transforms for smooth 60fps animation</li>
+            <li>Prevents text selection during drag</li>
+        </ul>
+    </div>
+</body>
+</html>

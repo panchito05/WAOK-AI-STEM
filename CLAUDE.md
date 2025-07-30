@@ -440,162 +440,65 @@ agents.forEach(agent => {
 2. **Comparison Phase** - Identify gaps:
    - MCPs installed but NOT documented → ADD to `.claude/mcp-requirements.md`
    - MCPs documented but NOT installed → INSTALL them
-   - Version/config mismatches → UPDATE to latest
+   - MCPs in BOTH → DO NOTHING (already synchronized)
 
 3. **Documentation Phase** - Save undocumented MCPs:
-   - Extract configuration from `claude mcp list`
-   - Update `.claude/mcp-requirements.md` with any new MCPs
-   - Include installation commands and environment variables
+   - If any MCP is found via `claude mcp list` that's not in `.claude/mcp-requirements.md`
+   - Add its installation command to the documentation
+   - Preserve all existing MCPs
 
 4. **Installation Phase** - Install missing MCPs:
-   ```bash
-   # Install all required MCPs with user scope for global availability
-   # Each MCP installation command is listed below
-   ```
+   - Use `install-mcps.sh` which verifies before installing
+   - Script will skip already installed MCPs
+   - Only install what's missing
 
 5. **Verification Phase**:
    - Run `claude mcp list` to confirm all MCPs connected
-   - Test critical MCPs with sample commands
+   - Expected: 14 MCPs minimum (11 standard + 3 additional)
    - Report: "MCP synchronization complete: X MCPs ready"
 
 ### Required MCP Servers
 
-#### 1. Context7 - Library Documentation
-```bash
-claude mcp add context7 -s user -- npx -y @upstash/context7-mcp@latest
-```
-- **Purpose**: Access up-to-date documentation for any library
-- **Usage**: Fetch React, Vue, Python, etc. documentation
+This project uses 14 MCPs:
 
-#### 2. Filesystem - File Access
-```bash
-claude mcp add filesystem -s user -- npx -y @modelcontextprotocol/server-filesystem /home/waok "/mnt/c/Users/wilbe/Desktop"
-```
-- **Purpose**: Read/write files across WSL and Windows
-- **Paths**: WSL home + Windows Desktop directory
+**Standard MCPs (11):**
+1. **context7** - Library documentation
+2. **filesystem** - File access (WSL + Windows)
+3. **git** - Version control
+4. **github** - GitHub repositories
+5. **sequential-thinking** - Problem solving
+6. **desktop-commander** - Desktop control
+7. **netlify** - Web deployment
+8. **playwright** - Browser automation
+9. **firebase** - Backend services
+10. **postgres** - PostgreSQL database
+11. **mysql** - MySQL database
 
-#### 3. Git - Version Control
-```bash
-claude mcp add git -s user -- npx -y @cyanheads/git-mcp-server
-```
-- **Purpose**: Git operations (commit, branch, merge, etc.)
-
-#### 4. GitHub - Repository Management
-```bash
-claude mcp add github -s user -e GITHUB_PERSONAL_ACCESS_TOKEN=YOUR_TOKEN -- npx -y @modelcontextprotocol/server-github
-```
-- **Purpose**: GitHub API operations
-- **Required**: Valid GitHub token with repo access
-
-#### 5. Sequential Thinking - Problem Solving
-```bash
-claude mcp add sequential-thinking -s user -- npx -y @modelcontextprotocol/server-sequential-thinking
-```
-- **Purpose**: Break down complex problems into steps
-
-#### 6. Desktop Commander - System Control
-```bash
-claude mcp add desktop-commander -s user -- npx -y @wonderwhy-er/desktop-commander
-```
-- **Purpose**: Desktop automation, screenshots, system control
-
-#### 7. Netlify - Deployment
-```bash
-claude mcp add netlify -s user -e NETLIFY_PERSONAL_ACCESS_TOKEN=YOUR_TOKEN -- npx -y @netlify/mcp
-```
-- **Purpose**: Deploy to Netlify, manage sites
-- **Required**: Netlify API token
-
-#### 8. Playwright - Browser Automation
-```bash
-claude mcp add playwright -s user -- npx -y @playwright/mcp
-```
-- **Purpose**: Web scraping, E2E testing, browser automation
-
-#### 9. Firebase - Backend Services
-```bash
-claude mcp add firebase -s user -e SERVICE_ACCOUNT_KEY_PATH=/path/to/firebase-service-account.json -e FIREBASE_STORAGE_BUCKET=project-name.firebasestorage.app -- npx -y @gannonh/firebase-mcp
-```
-- **Purpose**: Firebase operations (Firestore, Storage, Auth)
-- **Required**: Service account JSON file
-
-#### 10. PostgreSQL - Database
-```bash
-claude mcp add postgres -s user -- npx -y @modelcontextprotocol/server-postgres postgresql://user:password@localhost:5432/database
-```
-- **Purpose**: PostgreSQL database operations
-- **Required**: PostgreSQL server running
-
-#### 11. MySQL - Database
-```bash
-claude mcp add mysql -s user -e MYSQL_HOST=127.0.0.1 -e MYSQL_PORT=3306 -e MYSQL_USER=root -e MYSQL_PASSWORD="" -e MYSQL_DATABASE=mysql -- npx -y mysql-mcp-server
-```
-- **Purpose**: MySQL database operations
-- **Required**: MySQL server running
+**Additional MCPs (3):**
+12. **puppeteer** - Alternative browser control
+13. **everything** - MCP testing features
+14. **memory** - Persistent memory
 
 ### MCP Requirements File
 
-The project maintains `.claude/mcp-requirements.md` with:
-- List of required MCPs
-- Installation commands
-- Required environment variables
-- Configuration notes
+The project maintains `.claude/mcp-requirements.md` which contains:
+- Complete installation guide for all MCPs
+- Database setup instructions (PostgreSQL & MySQL)
+- All commands with `-s user` scope
+- Token configuration guide
+- Verification commands
 
-### Environment Setup
+### Synchronization Rules
 
-1. **Tokens Required**:
-   - GitHub Personal Access Token
-   - Netlify Personal Access Token
-   - Firebase Service Account JSON
-
-2. **Database Prerequisites**:
-   - PostgreSQL server (for postgres MCP)
-   - MySQL server (for mysql MCP)
-
-3. **System Requirements**:
-   - Node.js 20+ (via NVM recommended)
-   - WSL (for Windows users)
-
-### Installation Script
-
-For bulk installation, create and run:
-```bash
-#!/bin/bash
-# install-mcps.sh
-# Run: chmod +x install-mcps.sh && ./install-mcps.sh
-
-echo "Installing required MCPs for WAOK-AI-STEM project..."
-
-# Add each MCP installation command here
-# Use the commands from the Required MCP Servers section above
-
-echo "MCP installation complete. Run 'claude mcp list' to verify."
-```
-
-### Verification Commands
-
-After installation:
-```bash
-# List all MCPs
-claude mcp list
-
-# Inside Claude Code
-/mcp        # View available MCPs
-/status     # Check configuration
-```
-
-### Important Notes
-
-1. **Scope**: Always use `-s user` for global availability
-2. **Tokens**: Store securely, never commit to repository
-3. **Paths**: Adjust filesystem paths for your system
-4. **Updates**: MCPs update frequently, check for new versions
-5. **Project-specific**: Some MCPs may need project-specific configuration
+- **PRESERVE ALL MCPs**: Never uninstall, only add missing ones
+- **VERIFY FIRST**: Always check what exists before installing
+- **AUTOMATIC**: This happens without user intervention
+- **UNION PRINCIPLE**: Total MCPs = all installed + all documented
 
 ### Expected Outcome
 
 After synchronization:
-- All required MCPs installed and connected
-- Configuration documented in `.claude/mcp-requirements.md`
-- No manual MCP installation needed on new computers
-- Consistent MCP environment across all development machines
+- All 14 project MCPs installed and connected
+- Any additional MCPs preserved and documented
+- Install script ready for new developers
+- No manual MCP installation needed

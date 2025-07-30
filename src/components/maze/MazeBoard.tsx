@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { MazeCell, Direction, MazeGameState } from '@/lib/maze/types';
+import { Position } from '@/lib/maze/generator';
 import { cn } from '@/lib/utils';
+import { useMazeDrag } from '@/hooks/use-maze-drag';
 
 interface MazeBoardProps {
   gameState: MazeGameState;
@@ -12,7 +14,82 @@ interface MazeBoardProps {
 
 export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const { maze, playerPosition, viewRadius = 2 } = gameState;
+  
+  // Calculate actual cell size based on grid size
+  const gridSize = maze.length;
+  const cellSizeMap = {
+    10: 48, // w-12 h-12 = 48px
+    15: 40, // w-10 h-10 = 40px
+    25: 24, // w-6 h-6 = 24px
+    35: 16, // w-4 h-4 = 16px
+    45: 12, // w-3 h-3 = 12px
+  };
+  
+  const getCellSizeInPixels = () => {
+    if (gridSize <= 10) return cellSizeMap[10];
+    if (gridSize <= 15) return cellSizeMap[15];
+    if (gridSize <= 25) return cellSizeMap[25];
+    if (gridSize <= 35) return cellSizeMap[35];
+    return cellSizeMap[45];
+  };
+  
+  // Helper function to validate moves
+  const isValidMoveForDrag = useCallback((from: Position, to: Position): boolean => {
+    // Check bounds
+    if (to.row < 0 || to.row >= maze.length || to.col < 0 || to.col >= maze[0].length) {
+      return false;
+    }
+    
+    // Check if positions are adjacent
+    const rowDiff = Math.abs(from.row - to.row);
+    const colDiff = Math.abs(from.col - to.col);
+    
+    if (rowDiff + colDiff !== 1) {
+      return false;
+    }
+    
+    // Check if target is not a wall
+    const targetCell = maze[to.row]?.[to.col];
+    return targetCell && targetCell.type !== 'wall';
+  }, [maze]);
+  
+  // Use drag hook
+  const { isDragging, handleDragStart, getDragTransform } = useMazeDrag({
+    playerPosition,
+    onMove,
+    isValidMove: isValidMoveForDrag,
+    cellSize: getCellSizeInPixels(),
+    gridElement: gridRef.current,
+    isPaused: gameState.isPaused,
+    isCompleted: gameState.completed,
+  });
+
+  // Handle cell click for movement
+  const handleCellClick = useCallback((cellRow: number, cellCol: number) => {
+    if (gameState.completed || gameState.isPaused) return;
+    
+    // Check if clicked cell is adjacent to player
+    const rowDiff = cellRow - playerPosition.row;
+    const colDiff = cellCol - playerPosition.col;
+    
+    // Must be exactly one cell away (not diagonal)
+    if (Math.abs(rowDiff) + Math.abs(colDiff) !== 1) return;
+    
+    // Check if target cell is not a wall
+    const targetCell = maze[cellRow]?.[cellCol];
+    if (!targetCell || targetCell.type === 'wall') return;
+    
+    // Determine direction
+    let direction: Direction;
+    if (rowDiff === -1) direction = 'up';
+    else if (rowDiff === 1) direction = 'down';
+    else if (colDiff === -1) direction = 'left';
+    else direction = 'right';
+    
+    onMove(direction);
+  }, [gameState, playerPosition, maze, onMove]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -54,11 +131,27 @@ export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProp
     return distance <= viewRadius;
   }, [fogOfWar, gameState.difficulty, playerPosition, viewRadius]);
 
+  // Check if a cell is clickable (adjacent and not a wall)
+  const isCellClickable = useCallback((row: number, col: number) => {
+    if (gameState.completed || gameState.isPaused) return false;
+    
+    const rowDiff = Math.abs(row - playerPosition.row);
+    const colDiff = Math.abs(col - playerPosition.col);
+    
+    // Must be exactly one cell away (not diagonal)
+    if (rowDiff + colDiff !== 1) return false;
+    
+    // Check if target cell is not a wall
+    const targetCell = maze[row]?.[col];
+    return targetCell && targetCell.type !== 'wall';
+  }, [gameState, playerPosition, maze]);
+
   // Get cell styling based on type and state
   const getCellClassName = useCallback((cell: MazeCell) => {
     const isPlayer = playerPosition.row === cell.row && playerPosition.col === cell.col;
     const isVisible = isCellVisible(cell.row, cell.col);
     const isVisited = gameState.visitedCells.has(`${cell.row},${cell.col}`);
+    const isClickable = isCellClickable(cell.row, cell.col);
     
     // Base classes
     let classes = 'relative transition-all duration-200 rounded-sm ';
@@ -98,8 +191,13 @@ export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProp
       classes += 'ring-4 ring-blue-500 ring-offset-2 ';
     }
     
+    // Clickable cell styling
+    if (isClickable && !isPlayer) {
+      classes += 'cursor-pointer hover:bg-green-100 hover:border-green-300 hover:border-2 ';
+    }
+    
     return classes;
-  }, [playerPosition, isCellVisible, gameState]);
+  }, [playerPosition, isCellVisible, isCellClickable, gameState]);
 
   // Render cell content
   const renderCellContent = useCallback((cell: MazeCell) => {
@@ -111,9 +209,31 @@ export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProp
     }
     
     if (isPlayer) {
+      const dragTransform = getDragTransform();
+      const transform = dragTransform 
+        ? `translate(${dragTransform.x}px, ${dragTransform.y}px) scale(${isDragging ? 1.1 : 1})`
+        : 'scale(1)';
+      
       return (
-        <div className="absolute inset-0 flex items-center justify-center animate-bounce">
-          <div className="w-3/4 h-3/4 bg-blue-500 rounded-full relative">
+        <div 
+          className={cn(
+            "absolute inset-0 flex items-center justify-center",
+            !isDragging && "animate-bounce"
+          )}
+          style={{
+            transform,
+            transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+            zIndex: isDragging ? 50 : 10,
+          }}
+        >
+          <div 
+            className="w-3/4 h-3/4 bg-blue-500 rounded-full relative shadow-lg"
+            style={{
+              cursor: isDragging ? 'grabbing' : 'grab',
+            }}
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+          >
             {/* Eyes */}
             <div className="absolute top-1/4 left-1/4 w-1/6 h-1/6 bg-white rounded-full" />
             <div className="absolute top-1/4 right-1/4 w-1/6 h-1/6 bg-white rounded-full" />
@@ -141,10 +261,9 @@ export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProp
     }
     
     return null;
-  }, [playerPosition, isCellVisible, fogOfWar, gameState.difficulty]);
+  }, [playerPosition, isCellVisible, fogOfWar, gameState.difficulty, isDragging, handleDragStart, getDragTransform]);
 
-  // Calculate grid size for responsive design - smaller cells for large mazes
-  const gridSize = maze.length;
+  // Calculate cell size for responsive design - smaller cells for large mazes
   const cellSize = gridSize <= 10 ? 'w-12 h-12' : 
                    gridSize <= 15 ? 'w-10 h-10' : 
                    gridSize <= 25 ? 'w-6 h-6' : 
@@ -159,9 +278,11 @@ export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProp
     >
       {/* Maze grid */}
       <div 
+        ref={gridRef}
         className={cn(
           "grid gap-1 mx-auto",
-          "transition-all duration-300"
+          "transition-all duration-300",
+          isDragging && "select-none"
         )}
         style={{
           gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
@@ -176,7 +297,15 @@ export function MazeBoard({ gameState, onMove, fogOfWar = false }: MazeBoardProp
           row.map((cell, colIndex) => (
             <div
               key={`${rowIndex}-${colIndex}`}
-              className={cn(cellSize, getCellClassName(cell))}
+              data-cell
+              data-row={rowIndex}
+              data-col={colIndex}
+              className={cn(
+                cellSize, 
+                getCellClassName(cell),
+                "relative overflow-visible"
+              )}
+              onClick={() => handleCellClick(cell.row, cell.col)}
             >
               {renderCellContent(cell)}
             </div>
