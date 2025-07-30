@@ -26,6 +26,8 @@ import { ExerciseDetail } from '@/lib/practice-history';
 import { useExerciseTimer } from '@/hooks/use-exercise-timer';
 import { canvasCapturesStorage } from '@/lib/canvas-captures';
 import { profilesStorage } from '@/lib/profiles';
+import SessionSummary from './SessionSummary';
+import { useRouter } from 'next/navigation';
 
 interface Exercise {
   id: string;
@@ -41,7 +43,8 @@ interface PracticeScreenProps {
 
 export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   const { toast } = useToast();
-  const { startSession, updateSession, completeSession } = usePracticeHistory();
+  const { startSession, updateSession, completeSession, achievements } = usePracticeHistory();
+  const router = useRouter();
   
   // State management
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -78,6 +81,9 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
   
   // Timer auto-restart flag
   const [timerExpiredFlag, setTimerExpiredFlag] = useState(false);
+  
+  // Session completion state
+  const [unlockedAchievements, setUnlockedAchievements] = useState<any[]>([]);
   
   // Ref for canvas to clear it when needed
   const canvasRef = useRef<{ clearCanvas: () => void; getLines: () => any[] }>(null);
@@ -542,6 +548,10 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
       // Complete the practice session in history
       if (sessionId) {
         const totalTime = Math.round((Date.now() - sessionStartTime) / 1000);
+        
+        // Store achievements count before completing session
+        const previousAchievementsCount = achievements.length;
+        
         completeSession(sessionId, {
           totalExercises: exercises.length,
           correctAnswers,
@@ -551,6 +561,14 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
           hintsUsed: hintsUsedCount,
           consecutiveCorrect,
         });
+        
+        // Check for new achievements after a delay
+        setTimeout(() => {
+          if (achievements.length > previousAchievementsCount) {
+            const newAchievements = achievements.slice(previousAchievementsCount);
+            setUnlockedAchievements(newAchievements);
+          }
+        }, 500);
       }
       
       // Block auto-advance when showing session complete notification
@@ -609,6 +627,62 @@ export default function PracticeScreen({ card, onBack }: PracticeScreenProps) {
           </div>
         </Card>
       </div>
+    );
+  }
+
+  // Show session summary when complete
+  if (sessionComplete) {
+    const totalTime = Math.round((Date.now() - sessionStartTime) / 1000);
+    
+    return (
+      <SessionSummary
+        totalExercises={exercises.length}
+        correctAnswers={correctAnswers}
+        totalTime={totalTime}
+        cardName={card.name}
+        cardTopic={card.topic}
+        achievements={unlockedAchievements}
+        onReviewErrors={() => {
+          // Filter only incorrect exercises
+          const incorrectIndices: number[] = [];
+          exercises.forEach((_, index) => {
+            const userAnswer = userAnswers[index];
+            if (userAnswer && !userAnswer.isCorrect) {
+              incorrectIndices.push(index);
+            }
+          });
+          
+          if (incorrectIndices.length > 0) {
+            // Enter review mode with first error
+            setSessionComplete(false);
+            setIsReviewMode(true);
+            setCurrentIndex(incorrectIndices[0]);
+            setActiveIndex(exercises.length - 1); // Last exercise was active
+            setShowSolution(true);
+            setAttempts(0);
+            setFeedback(undefined);
+            setHint('');
+            
+            // Load canvas capture for the error
+            const targetExercise = exercises[incorrectIndices[0]];
+            if (targetExercise) {
+              const captures = canvasCapturesStorage.getByCard(card.id);
+              const capture = captures.find(c => 
+                c.exerciseProblem === targetExercise.problem
+              );
+              setReviewCapture(capture || null);
+            }
+          }
+        }}
+        onNewSession={() => {
+          // Reset all states for a new session
+          window.location.reload();
+        }}
+        onBackToCards={onBack}
+        onViewProgress={() => {
+          router.push('/progress');
+        }}
+      />
     );
   }
 
