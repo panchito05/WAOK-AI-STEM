@@ -150,10 +150,11 @@ function shuffleDirections(): Direction[] {
  * Add complexity to the maze by removing some walls
  */
 function addComplexity(maze: MazeCell[][], size: number, complexity: number): void {
+  let removed = 0; // Declare at function scope
+  
   // For high complexity (difficulty > 0.9), create many loops and dead ends
   if (complexity > 0.9) {
     const wallsToRemove = Math.floor(size * size * 0.15); // Remove 15% of walls for very complex maze
-    let removed = 0;
     
     // First pass: Create multiple loops by removing walls between paths
     for (let attempts = 0; attempts < wallsToRemove * 20 && removed < wallsToRemove; attempts++) {
@@ -252,7 +253,6 @@ function addComplexity(maze: MazeCell[][], size: number, complexity: number): vo
   } else {
     // Original complexity for easier difficulties
     const wallsToRemove = Math.floor(size * complexity);
-    let removed = 0;
     
     for (let attempts = 0; attempts < wallsToRemove * 10 && removed < wallsToRemove; attempts++) {
       const row = 1 + Math.floor(Math.random() * (size - 2));

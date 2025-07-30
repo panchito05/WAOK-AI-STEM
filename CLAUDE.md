@@ -227,3 +227,139 @@ The application is currently deployed on Netlify with the following configuratio
 6. Deployed using Netlify MCP tools
 
 For detailed deployment instructions, see [NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md)
+
+## Project Agents
+
+**IMPORTANT**: This project includes specialized AI agents. When setting up on a new computer, Claude should automatically check and create these agents if they don't exist. Each agent has specific expertise to help with different aspects of the project.
+
+### Automatic Agent Setup Instructions
+
+When this project is opened in Claude Code on a new computer:
+1. Check if the agents listed below exist using the `/agents` command
+2. For any missing agents, create them with the exact specifications provided
+3. Verify all agents are properly configured before proceeding
+
+### Agent Specifications
+
+#### 1. netlify-deploy-manager
+**Description**: Netlify deployment and serverless function expert. Use PROACTIVELY for deployments, function optimization, environment configuration, and production issues. Manages builds, monitors performance, and handles Netlify-specific features.
+
+**Tools**: Bash, Read, Edit, Grep, Glob, WebFetch, mcp__netlify__netlify-deploy-services, mcp__netlify__netlify-project-services, mcp__netlify__netlify-coding-rules, TodoWrite
+
+**System Prompt**: See `.claude/agents/netlify-deploy-manager.md` for full prompt
+
+#### 2. genkit-ai-expert
+**Description**: Expert in Google Genkit AI integration, Gemini API, and AI flow development. Use PROACTIVELY when working with AI flows, prompts, or Genkit configuration. Specializes in exercise generation and visual problem solving.
+
+**Tools**: Read, Edit, MultiEdit, Write, Bash, Grep, Glob, WebFetch, mcp__netlify__netlify-coding-rules
+
+**System Prompt**: See `.claude/agents/genkit-ai-expert.md` for full prompt
+
+#### 3. mcp-orchestrator
+**Description**: Use this agent when you need to intelligently select, combine, and orchestrate multiple MCP (Model Context Protocol) tools to complete complex tasks. This agent excels at analyzing task requirements, determining which MCPs are needed, executing them in the correct sequence, and using outputs from one MCP as inputs for others.
+
+**Tools**: * (all tools)
+
+**System Prompt**: See `.claude/agents/mcp-orchestrator.md` for full prompt
+
+#### 4. react-nextjs-optimizer
+**Description**: Next.js 15 and React performance optimization specialist. Use PROACTIVELY for component optimization, hydration issues, state management, and build performance. Expert in App Router, Server Components, and Turbopack.
+
+**Tools**: Read, Edit, MultiEdit, Bash, Grep, Glob, TodoWrite
+
+**System Prompt**: See `.claude/agents/react-nextjs-optimizer.md` for full prompt
+
+#### 5. test-automation
+**Description**: Testing automation specialist for WAOK-AI-STEM. Use PROACTIVELY after code changes to run tests, validate functionality, and ensure quality. Expert in manual testing flows, API testing, and UI validation.
+
+**Tools**: Read, Edit, Write, Bash, Grep, Glob, TodoWrite, mcp__firebase-community__firestore_list_documents, mcp__firebase-community__firestore_get_document
+
+**System Prompt**: See `.claude/agents/test-automation.md` for full prompt
+
+#### 6. ui-ux-designer
+**Description**: Child-friendly UI/UX design specialist for educational apps. Use PROACTIVELY when creating or modifying UI components, implementing animations, or ensuring accessibility. Expert in kid-friendly interfaces and gamification.
+
+**Tools**: Read, Edit, MultiEdit, Write, Grep, Glob, WebFetch
+
+**System Prompt**: See `.claude/agents/ui-ux-designer.md` for full prompt
+
+#### 7. qa-test-architect
+**Description**: Use this agent when you need to design, implement, or review comprehensive testing strategies for web applications. This agent excels at creating test suites for educational applications targeting children, ensuring quality across unit, integration, E2E, performance, accessibility, and security testing dimensions.
+
+**Tools**: * (all tools)
+
+**System Prompt**: See `.claude/agents/qa-test-architect.md` for full prompt
+
+#### 8. test-agent
+**Description**: Simple test agent to verify functionality
+
+**Tools**: * (all tools)
+
+**System Prompt**: See `.claude/agents/test-agent.md` for full prompt
+
+#### 9. fault-classifier-structural-logic
+**Description**: Agent specialized in identifying and classifying failures in WAOK-AI-STEM code as either [STRUCTURAL FAILURE] or [LOGIC FAILURE], following the protocol defined in AI-PROMPTS.md
+
+**Tools**: Default tools
+
+**System Prompt**: See `.claude/agents/fault-classifier-structural-logic.md` for full prompt
+
+### Agent Creation Helper Script
+
+To help with agent creation, here's a helper script that can be run in the project:
+
+```javascript
+// create-agents.js
+const agents = [
+  {
+    name: 'netlify-deploy-manager',
+    description: 'Netlify deployment and serverless function expert. Use PROACTIVELY for deployments, function optimization, environment configuration, and production issues.',
+    tools: ['Bash', 'Read', 'Edit', 'Grep', 'Glob', 'WebFetch', 'mcp__netlify__netlify-deploy-services', 'mcp__netlify__netlify-project-services', 'mcp__netlify__netlify-coding-rules', 'TodoWrite']
+  },
+  {
+    name: 'genkit-ai-expert',
+    description: 'Expert in Google Genkit AI integration, Gemini API, and AI flow development. Use PROACTIVELY when working with AI flows, prompts, or Genkit configuration.',
+    tools: ['Read', 'Edit', 'MultiEdit', 'Write', 'Bash', 'Grep', 'Glob', 'WebFetch', 'mcp__netlify__netlify-coding-rules']
+  },
+  {
+    name: 'mcp-orchestrator',
+    description: 'Use this agent when you need to intelligently select, combine, and orchestrate multiple MCP tools to complete complex tasks.',
+    tools: ['*']
+  },
+  {
+    name: 'react-nextjs-optimizer',
+    description: 'Next.js 15 and React performance optimization specialist. Use PROACTIVELY for component optimization, hydration issues, state management, and build performance.',
+    tools: ['Read', 'Edit', 'MultiEdit', 'Bash', 'Grep', 'Glob', 'TodoWrite']
+  },
+  {
+    name: 'test-automation',
+    description: 'Testing automation specialist for WAOK-AI-STEM. Use PROACTIVELY after code changes to run tests, validate functionality, and ensure quality.',
+    tools: ['Read', 'Edit', 'Write', 'Bash', 'Grep', 'Glob', 'TodoWrite', 'mcp__firebase-community__firestore_list_documents', 'mcp__firebase-community__firestore_get_document']
+  },
+  {
+    name: 'ui-ux-designer',
+    description: 'Child-friendly UI/UX design specialist for educational apps. Use PROACTIVELY when creating or modifying UI components.',
+    tools: ['Read', 'Edit', 'MultiEdit', 'Write', 'Grep', 'Glob', 'WebFetch']
+  },
+  {
+    name: 'qa-test-architect',
+    description: 'Use this agent when you need to design, implement, or review comprehensive testing strategies for web applications.',
+    tools: ['*']
+  }
+];
+
+console.log('Agent creation commands:');
+console.log('First check existing agents: /agents\n');
+agents.forEach(agent => {
+  console.log(`# Create ${agent.name}`);
+  console.log(`/agents create ${agent.name} "${agent.description}" --tools ${agent.tools.join(',')} --system-prompt-file .claude/agents/${agent.name}.md\n`);
+});
+```
+
+### Important Notes
+
+1. **Agent Files**: All full system prompts are stored in `.claude/agents/` directory
+2. **Automatic Creation**: Claude should check and create missing agents when opening the project
+3. **Tools**: Some agents use all tools (*), others use specific tool sets
+4. **Proactive Usage**: Many agents are marked for PROACTIVE use - Claude should use them automatically when relevant
+5. **Updates**: If agent specifications change, update both this file and the corresponding `.claude/agents/*.md` files

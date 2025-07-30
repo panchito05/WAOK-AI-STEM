@@ -366,33 +366,36 @@ export function MazeScreen({ onBack }: MazeScreenProps) {
             <DialogTitle className="text-3xl text-center text-green-600">
               🎉 ¡Felicitaciones! 🎉
             </DialogTitle>
-            <DialogDescription className="text-center space-y-4 pt-4">
-              <div className="text-6xl animate-bounce">🏆</div>
-              <div className="text-lg">
-                <p className="font-semibold mb-2">¡Completaste el laberinto!</p>
-                <div className="space-y-1 text-gray-700">
-                  <p>⏱️ Tiempo: {gameState ? Math.floor((gameState.endTime! - gameState.startTime - gameState.pausedTime) / 1000) : 0} segundos</p>
-                  <p>👣 Movimientos: {gameState?.moveCount || 0}</p>
-                  <p>💡 Pistas usadas: {gameState?.hintsUsed || 0}</p>
-                </div>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={initializeGame}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-                >
-                  Nuevo Laberinto
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowVictoryModal(false)}
-                  className="flex-1"
-                >
-                  Cerrar
-                </Button>
-              </div>
+            <DialogDescription>
+              Has completado exitosamente el laberinto
             </DialogDescription>
           </DialogHeader>
+          <div className="text-center space-y-4 pt-4">
+            <div className="text-6xl animate-bounce">🏆</div>
+            <div className="text-lg">
+              <p className="font-semibold mb-2">¡Completaste el laberinto!</p>
+              <div className="space-y-1 text-gray-700">
+                <p>⏱️ Tiempo: {gameState ? Math.floor((gameState.endTime! - gameState.startTime - gameState.pausedTime) / 1000) : 0} segundos</p>
+                <p>👣 Movimientos: {gameState?.moveCount || 0}</p>
+                <p>💡 Pistas usadas: {gameState?.hintsUsed || 0}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={initializeGame}
+                className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+              >
+                Nuevo Laberinto
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowVictoryModal(false)}
+                className="flex-1"
+              >
+                Cerrar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
