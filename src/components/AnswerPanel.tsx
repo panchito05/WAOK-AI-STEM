@@ -207,42 +207,44 @@ export default function AnswerPanel({
               />
             </div>
 
-            {!isReviewMode && (
-              <div className="flex gap-2">
-                {currentIndex > 0 && onPrevious && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onPrevious}
-                    size="sm"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Anterior
-                  </Button>
-                )}
-                
-                {!showSolution && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowConfirmDialog(true)}
-                    size="sm"
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    Revelar
-                  </Button>
-                )}
-                
+            <div className="flex gap-2">
+              {currentIndex > 0 && onPrevious && (
                 <Button
-                  type="submit"
-                  disabled={!canSubmit || !answer.trim()}
-                  className="flex-1"
+                  type="button"
+                  variant="outline"
+                  onClick={onPrevious}
+                  size="sm"
                 >
-                  <Send className="mr-2 h-4 w-4" />
-                  Verificar
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Anterior
                 </Button>
-              </div>
-            )}
+              )}
+              
+              {!isReviewMode && (
+                <>
+                  {!showSolution && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowConfirmDialog(true)}
+                      size="sm"
+                    >
+                      <Eye className="mr-2 h-4 w-4" />
+                      Revelar
+                    </Button>
+                  )}
+                  
+                  <Button
+                    type="submit"
+                    disabled={!canSubmit || !answer.trim()}
+                    className="flex-1"
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    Verificar
+                  </Button>
+                </>
+              )}
+            </div>
           </form>
 
           {/* Feedback */}
