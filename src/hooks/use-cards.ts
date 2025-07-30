@@ -54,12 +54,36 @@ export function useCards() {
         timerEnabled: true,
         timerSeconds: 0, // El módulo maneja su propio timer
       };
+
+      // Crear tarjeta Laberinto predefinida si no existe
+      const mazeCard: PracticeCard = {
+        id: 'maze-module',
+        type: 'module',
+        name: 'Laberinto Clásico',
+        topic: 'Laberinto',
+        difficulty: 5,
+        customInstructions: 'Encuentra la salida en el menor tiempo posible. Tres tamaños y niveles de dificultad disponibles.',
+        exerciseCount: 0, // No aplica para módulos
+        attemptsPerExercise: 0, // No aplica para módulos
+        autoCompensation: false,
+        adaptiveDifficulty: false,
+        isFavorite: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        color: '#10b981', // Emerald green
+        icon: 'Route',
+        timerEnabled: true,
+        timerSeconds: 0, // El módulo maneja su propio timer
+      };
       
-      // Verificar si ya existe la tarjeta Sudoku
+      // Verificar si ya existen las tarjetas de módulos
       const hasSudokuCard = storedCards.some(card => card.id === 'sudoku-module');
+      const hasMazeCard = storedCards.some(card => card.id === 'maze-module');
       
       // Combinar tarjetas almacenadas con módulos predefinidos
-      const allCards = hasSudokuCard ? storedCards : [...storedCards, sudokuCard];
+      let allCards = storedCards;
+      if (!hasSudokuCard) allCards = [...allCards, sudokuCard];
+      if (!hasMazeCard) allCards = [...allCards, mazeCard];
       
       setCards(allCards);
       

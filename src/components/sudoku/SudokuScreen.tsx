@@ -43,7 +43,11 @@ const DIFFICULTY_CONFIG = {
   hard: { label: 'Difícil', color: 'bg-red-500', icon: Target, description: 'Para expertos' }
 };
 
-export default function SudokuScreen() {
+interface SudokuScreenProps {
+  onBack?: () => void;
+}
+
+export default function SudokuScreen({ onBack }: SudokuScreenProps) {
   const router = useRouter();
   const { currentProfile } = useProfile();
   const [gameState, setGameState] = useState<SudokuGameState | null>(null);
@@ -73,6 +77,12 @@ export default function SudokuScreen() {
     if (currentProfile) {
       const savedGame = sudokuStorage.getActiveGame();
       if (savedGame && !savedGame.completed) {
+        // Validar que el juego guardado tiene una solución
+        if (!savedGame.solution) {
+          console.error('Juego guardado sin solución, ignorando...');
+          sudokuStorage.clearActiveGame();
+          return;
+        }
         setGameState(savedGame);
         setShowVariantSelector(false);
         setShowDifficultySelector(false);
@@ -241,7 +251,7 @@ export default function SudokuScreen() {
   const handleHint = () => {
     if (!gameState || gameState.hintsUsed >= 3) return;
 
-    const hint = getHint(gameState.board, gameState.solution);
+    const hint = getHint(gameState);
     if (hint) {
       handleValueChange(hint.row, hint.col, hint.value);
       setGameState(prev => ({
@@ -329,7 +339,13 @@ export default function SudokuScreen() {
         <div className="max-w-4xl mx-auto">
           <Button 
             variant="ghost" 
-            onClick={() => router.push('/')}
+            onClick={() => {
+              if (onBack) {
+                onBack();
+              } else {
+                router.push('/');
+              }
+            }}
             className="mb-6"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -483,8 +499,11 @@ export default function SudokuScreen() {
             <Button 
               variant="ghost" 
               onClick={() => {
-                console.log('Navigating to home...');
-                router.push('/');
+                if (onBack) {
+                  onBack();
+                } else {
+                  router.push('/');
+                }
               }}
               size="sm"
               className="relative z-50"

@@ -675,6 +675,13 @@ function solveBoardRecursive(board: number[][], variant: SudokuVariant): boolean
 export function getHint(gameState: SudokuGameState): { row: number; col: number; value: number } | null {
   const board = gameState.board;
   const solution = gameState.solution;
+  
+  // Validar que tenemos una solución
+  if (!solution || !board || board.length === 0) {
+    console.error('getHint: Invalid gameState - missing solution or board');
+    return null;
+  }
+  
   const size = board.length;
   
   // Buscar celdas vacías con errores

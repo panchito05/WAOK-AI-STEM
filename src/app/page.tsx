@@ -8,9 +8,10 @@ import CardEditor from '@/components/CardEditor';
 import PracticeScreen from '@/components/PracticeScreen';
 import MultiPracticeScreen from '@/components/MultiPracticeScreen';
 import SudokuScreen from '@/components/sudoku/SudokuScreen';
+import { MazeScreen } from '@/components/maze/MazeScreen';
 import { PracticeCard } from '@/lib/storage';
 
-type ViewMode = 'list' | 'practice' | 'edit' | 'multi-practice' | 'sudoku';
+type ViewMode = 'list' | 'practice' | 'edit' | 'multi-practice' | 'sudoku' | 'maze';
 
 export default function Home() {
   const searchParams = useSearchParams();
@@ -62,8 +63,12 @@ export default function Home() {
   }
 
   const handleSelectCard = (card: PracticeCard) => {
-    if (card.type === 'module' && card.id === 'sudoku-module') {
-      setCurrentView('sudoku');
+    if (card.type === 'module') {
+      if (card.id === 'sudoku-module') {
+        setCurrentView('sudoku');
+      } else if (card.id === 'maze-module') {
+        setCurrentView('maze');
+      }
     } else {
       setSelectedCard(card);
       setCurrentView('practice');
@@ -137,6 +142,12 @@ export default function Home() {
           
           {currentView === 'sudoku' && (
             <SudokuScreen
+              onBack={handleBackToList}
+            />
+          )}
+          
+          {currentView === 'maze' && (
+            <MazeScreen
               onBack={handleBackToList}
             />
           )}

@@ -263,4 +263,21 @@ export const sudokuStorage = {
       return false;
     }
   },
+
+  clearActiveGame(): void {
+    const currentProfile = getCurrentProfile();
+    if (!currentProfile) return;
+    
+    try {
+      const key = getStorageKey(SUDOKU_STORAGE_KEY);
+      const games = this.getAllGames();
+      // Filtrar juegos no completados del perfil actual
+      const filteredGames = games.filter(game => 
+        game.id !== currentProfile.id || game.completed
+      );
+      localStorage.setItem(key, JSON.stringify(filteredGames));
+    } catch (error) {
+      console.error('Error clearing active game:', error);
+    }
+  },
 };

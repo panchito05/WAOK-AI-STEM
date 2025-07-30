@@ -25,7 +25,8 @@ import {
   Shuffle,
   Search,
   X,
-  Puzzle
+  Puzzle,
+  Route
 } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { PracticeCard } from '@/lib/storage';
