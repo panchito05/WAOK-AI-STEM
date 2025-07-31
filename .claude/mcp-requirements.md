@@ -118,6 +118,22 @@ claude mcp add mysql -s user -e MYSQL_HOST=127.0.0.1 -e MYSQL_PORT=3306 -e MYSQL
 - **Default connection**: root user, no password
 - **Host**: 127.0.0.1 (not localhost)
 
+### 12. Firecrawl - Web Scraping and Research
+```bash
+claude mcp add firecrawl -s user -e FIRECRAWL_API_KEY="YOUR_FIRECRAWL_API_KEY" -- npx -y firecrawl-mcp
+```
+- **Purpose**: Advanced web scraping, crawling, and deep research capabilities
+- **Features**: 
+  - Web scraping with multiple formats (markdown, HTML)
+  - Batch scraping for multiple URLs
+  - Website mapping to discover URLs
+  - Web search with content extraction
+  - Deep research with AI analysis
+  - LLMs.txt generation
+- **Required Token**: Create at https://www.firecrawl.dev/app/api-keys
+- **Rate limiting**: Automatic handling with exponential backoff
+- **Credit monitoring**: Built-in usage tracking
+
 ## Installation Script
 
 Save this as `install-mcps.sh` and run with `bash install-mcps.sh`:
@@ -133,6 +149,7 @@ echo ""
 # IMPORTANT: Update these values
 GITHUB_TOKEN="YOUR_GITHUB_TOKEN_HERE"
 NETLIFY_TOKEN="YOUR_NETLIFY_TOKEN_HERE"
+FIRECRAWL_TOKEN="YOUR_FIRECRAWL_TOKEN_HERE"
 WSL_HOME="/home/waok"  # Update with your WSL username
 WINDOWS_DESKTOP="/mnt/c/Users/wilbe/Desktop"  # Update with your Windows username
 
@@ -148,6 +165,7 @@ claude mcp add playwright -s user -- npx -y @playwright/mcp
 claude mcp add firebase -s user -e SERVICE_ACCOUNT_KEY_PATH="$WSL_HOME/firebase-service-account.json" -e FIREBASE_STORAGE_BUCKET=waok-ai-stem.firebasestorage.app -- npx -y @gannonh/firebase-mcp
 claude mcp add postgres -s user -- npx -y @modelcontextprotocol/server-postgres postgresql://root:@localhost:5432/postgres
 claude mcp add mysql -s user -e MYSQL_HOST=127.0.0.1 -e MYSQL_PORT=3306 -e MYSQL_USER=root -e MYSQL_PASSWORD="" -e MYSQL_DATABASE=mysql -- npx -y mysql-mcp-server
+claude mcp add firecrawl -s user -e FIRECRAWL_API_KEY="$FIRECRAWL_TOKEN" -- npx -y firecrawl-mcp
 
 echo ""
 echo "Installation complete! Run 'claude mcp list' to verify."
@@ -174,6 +192,7 @@ Expected output:
 ✓ firebase: Connected
 ✓ postgres: Connected
 ✓ mysql: Connected
+✓ firecrawl: Connected
 ```
 
 ## Troubleshooting

@@ -454,14 +454,14 @@ agents.forEach(agent => {
 
 5. **Verification Phase**:
    - Run `claude mcp list` to confirm all MCPs connected
-   - Expected: 14 MCPs minimum (11 standard + 3 additional)
+   - Expected: 15 MCPs minimum (12 standard + 3 additional)
    - Report: "MCP synchronization complete: X MCPs ready"
 
 ### Required MCP Servers
 
-This project uses 14 MCPs:
+This project uses 15 MCPs:
 
-**Standard MCPs (11):**
+**Standard MCPs (12):**
 1. **context7** - Library documentation
 2. **filesystem** - File access (WSL + Windows)
 3. **git** - Version control
@@ -473,11 +473,12 @@ This project uses 14 MCPs:
 9. **firebase** - Backend services
 10. **postgres** - PostgreSQL database
 11. **mysql** - MySQL database
+12. **firecrawl** - Web scraping and deep research
 
 **Additional MCPs (3):**
-12. **puppeteer** - Alternative browser control
-13. **everything** - MCP testing features
-14. **memory** - Persistent memory
+13. **puppeteer** - Alternative browser control
+14. **everything** - MCP testing features
+15. **memory** - Persistent memory
 
 ### MCP Requirements File
 
@@ -498,7 +499,7 @@ The project maintains `.claude/mcp-requirements.md` which contains:
 ### Expected Outcome
 
 After synchronization:
-- All 14 project MCPs installed and connected
+- All 15 project MCPs installed and connected
 - Any additional MCPs preserved and documented
 - Install script ready for new developers
 - No manual MCP installation needed
