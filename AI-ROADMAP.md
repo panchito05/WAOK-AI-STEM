@@ -5,7 +5,7 @@ en los laberintos quiero hacer clic una sola vez con el mouse y que se quede sel
 
 Prompt para Módulo de Laberintos Educativos
 
-  Basándome en el éxito del módulo Sudoku puede usarlo como referencia analizar su codigo primero para que ejecutes correctamente el siguente prompt ultra think de solution and planificacion:
+  Basándome en el éxito del módulo Sudoku puede usarlo como referencia analizar su codigo primero para que ejecutes correctamente el siguente prompt ultra think de solution and planificacion tedes considerar que se usara en computadoras con mouse, pero tambien en table y smarphone toush eso es importante para la usabilidad en esos dispositivos por los tanto debe poder adatarse a esas pantallas atutomaticamente pero tanbien funcionar con el touch y todo lo que involucra usar esos dispositivos recuerda usar los subagentes que sean necesario para completar esta tarea:
 
   ---
   Quiero crear un módulo de "Laberinto Clásico" completamente aislado del         

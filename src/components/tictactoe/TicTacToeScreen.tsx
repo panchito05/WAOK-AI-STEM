@@ -113,101 +113,33 @@ export default function TicTacToeScreen({ onBack }: TicTacToeScreenProps) {
     animationsEnabled: true
   };
 
-  // Timer por turno
-  useEffect(() => {
-    if (!gameState || !gameState.config.timerEnabled || gameState.isPaused || gameState.gameStatus !== 'playing') {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          // Tiempo agotado, cambiar turno
-          handleTimeout();
-          return gameState.config.timerSeconds;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [gameState?.currentPlayer, gameState?.isPaused, gameState?.gameStatus]);
-
-  // Manejar movimientos de la IA
-  useEffect(() => {
-    if (!gameState || 
-        gameState.gameMode !== 'pvc' || 
-        gameState.currentPlayer === playerSymbol ||
-        gameState.gameStatus !== 'playing' ||
-        gameState.isPaused) {
-      return;
-    }
-
-    // Retraso para hacer la IA más natural
-    const aiDelay = setTimeout(() => {
-      const aiMove = getAIMove(
-        gameState.board,
-        gameState.currentPlayer,
-        gameState.config.aiDifficulty
-      );
-
-      if (aiMove) {
-        handleCellClick(aiMove.row, aiMove.col);
-      }
-    }, 500 + Math.random() * 500); // 0.5-1s de retraso
-
-    return () => clearTimeout(aiDelay);
-  }, [gameState?.currentPlayer, gameState?.gameStatus]);
-
-  const handleTimeout = () => {
-    if (!gameState) return;
+  const handleGameEnd = useCallback((finalState: TicTacToeGameState) => {
+    const gameTime = (finalState.endTime || Date.now()) - finalState.startTime - finalState.pausedTime;
     
-    // Cambiar turno sin hacer movimiento
-    setGameState({
-      ...gameState,
-      currentPlayer: switchPlayer(gameState.currentPlayer)
-    });
-  };
-
-  const startNewGame = (mode: GameMode, size: BoardSize, config?: TicTacToeConfig) => {
-    const finalConfig = config || { ...defaultConfig, gameMode: mode, boardSize: size };
-    
-    // Determinar quién empieza
-    let firstPlayer: Player = 'X';
-    if (finalConfig.firstPlayer === 'random') {
-      firstPlayer = Math.random() < 0.5 ? 'X' : 'O';
-    } else if (finalConfig.firstPlayer === 'O') {
-      firstPlayer = 'O';
-    }
-
-    // En modo vs IA, el jugador siempre es X por simplicidad
-    if (mode === 'pvc') {
-      setPlayerSymbol('X');
-    }
-
-    const newGame: TicTacToeGameState = {
-      id: Date.now().toString(),
-      board: createEmptyBoard(size),
-      boardSize: size,
-      currentPlayer: firstPlayer,
-      gameMode: mode,
-      gameStatus: 'playing',
-      winner: null,
-      winningLine: null,
-      moves: [],
-      startTime: Date.now(),
-      pausedTime: 0,
-      isPaused: false,
-      config: finalConfig
+    const result: GameResult = {
+      winner: finalState.winner,
+      winningLine: finalState.winningLine,
+      gameTime,
+      moves: finalState.moves.length,
+      gameMode: finalState.gameMode,
+      boardSize: finalState.boardSize,
+      aiDifficulty: finalState.config.aiDifficulty
     };
 
-    setGameState(newGame);
-    setShowModeSelector(false);
-    setShowSizeSelector(false);
-    setTimeLeft(finalConfig.timerSeconds);
-  };
+    // Guardar estadísticas
+    tictactoeStorage.recordGameResult(result, playerSymbol);
+    setStats(tictactoeStorage.getStats());
 
-  const handleCellClick = (row: number, col: number) => {
+    // Mostrar modal apropiado
+    if (finalState.winner) {
+      setShowConfetti(true);
+      setShowVictoryModal(true);
+    } else {
+      setShowDrawModal(true);
+    }
+  }, [playerSymbol]);
+
+  const handleCellClick = useCallback((row: number, col: number) => {
     if (!gameState || gameState.gameStatus !== 'playing' || gameState.isPaused) return;
     
     const cell = gameState.board[row][col];
@@ -252,33 +184,167 @@ export default function TicTacToeScreen({ onBack }: TicTacToeScreenProps) {
     if (winner || isDraw) {
       handleGameEnd(newGameState);
     }
-  };
+  }, [gameState, playerSymbol, handleGameEnd]);
 
-  const handleGameEnd = (finalState: TicTacToeGameState) => {
-    const gameTime = (finalState.endTime || Date.now()) - finalState.startTime - finalState.pausedTime;
+  // Timer por turno
+  useEffect(() => {
+    if (!gameState || !gameState.config.timerEnabled || gameState.isPaused || gameState.gameStatus !== 'playing') {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          // Tiempo agotado, cambiar turno
+          handleTimeout();
+          return gameState.config.timerSeconds;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [gameState?.currentPlayer, gameState?.isPaused, gameState?.gameStatus]);
+
+  // Función específica para movimientos de la IA (sin restricciones del jugador)
+  const makeAIMove = useCallback((row: number, col: number) => {
+    if (!gameState || gameState.gameStatus !== 'playing' || gameState.isPaused) return;
     
-    const result: GameResult = {
-      winner: finalState.winner,
-      winningLine: finalState.winningLine,
-      gameTime,
-      moves: finalState.moves.length,
-      gameMode: finalState.gameMode,
-      boardSize: finalState.boardSize,
-      aiDifficulty: finalState.config.aiDifficulty
+    const cell = gameState.board[row][col];
+    if (cell !== null) return;
+
+    // Hacer el movimiento de la IA
+    const newBoard = makeMove(gameState.board, row, col, gameState.currentPlayer);
+    const move = {
+      row,
+      col,
+      player: gameState.currentPlayer,
+      timestamp: Date.now()
     };
 
-    // Guardar estadísticas
-    tictactoeStorage.recordGameResult(result, playerSymbol);
-    setStats(tictactoeStorage.getStats());
+    // Verificar estado del juego
+    const { winner, winningLine } = checkWinner(newBoard);
+    const isDraw = !winner && isBoardFull(newBoard);
 
-    // Mostrar modal apropiado
-    if (finalState.winner) {
-      setShowConfetti(true);
-      setShowVictoryModal(true);
-    } else {
-      setShowDrawModal(true);
+    // Actualizar estado
+    const newGameState: TicTacToeGameState = {
+      ...gameState,
+      board: newBoard,
+      currentPlayer: switchPlayer(gameState.currentPlayer),
+      moves: [...gameState.moves, move],
+      winner,
+      winningLine,
+      selectedCell: { row, col },
+      endTime: winner || isDraw ? Date.now() : undefined
+    };
+
+    setGameState(newGameState);
+
+    // Resetear timer
+    if (gameState.config.timerEnabled && !winner && !isDraw) {
+      setTimeLeft(gameState.config.timerSeconds);
     }
+
+    // Manejar fin del juego
+    if (winner || isDraw) {
+      handleGameEnd(newGameState);
+    }
+  }, [gameState, handleGameEnd]);
+
+  // Manejar movimientos de la IA
+  useEffect(() => {
+    console.log('AI Effect triggered:', {
+      hasGameState: !!gameState,
+      gameMode: gameState?.gameMode,
+      gameStatus: gameState?.gameStatus,
+      currentPlayer: gameState?.currentPlayer,
+      playerSymbol,
+      isPaused: gameState?.isPaused
+    });
+
+    if (!gameState || 
+        gameState.gameMode !== 'pvc' || 
+        gameState.gameStatus !== 'playing' ||
+        gameState.isPaused) {
+      return;
+    }
+
+    // En modo PvC, la IA juega cuando no es el turno del jugador
+    const isAITurn = gameState.currentPlayer !== playerSymbol;
+    
+    console.log('AI turn check:', { isAITurn, currentPlayer: gameState.currentPlayer, playerSymbol });
+    
+    if (!isAITurn) {
+      return;
+    }
+
+    // Retraso para hacer la IA más natural
+    const aiDelay = setTimeout(() => {
+      const aiMove = getAIMove(
+        gameState.board,
+        gameState.currentPlayer,
+        gameState.config.aiDifficulty
+      );
+
+      if (aiMove) {
+        console.log('AI making move:', aiMove);
+        makeAIMove(aiMove.row, aiMove.col);
+      } else {
+        console.log('AI could not find a valid move!');
+      }
+    }, 500 + Math.random() * 500); // 0.5-1s de retraso
+
+    return () => clearTimeout(aiDelay);
+  }, [gameState?.currentPlayer, gameState?.gameStatus, gameState?.isPaused, gameState?.gameMode, playerSymbol, makeAIMove]);
+
+  const handleTimeout = () => {
+    if (!gameState) return;
+    
+    // Cambiar turno sin hacer movimiento
+    setGameState({
+      ...gameState,
+      currentPlayer: switchPlayer(gameState.currentPlayer)
+    });
   };
+
+  const startNewGame = (mode: GameMode, size: BoardSize, config?: TicTacToeConfig) => {
+    const finalConfig = config || { ...defaultConfig, gameMode: mode, boardSize: size };
+    
+    // Determinar quién empieza
+    let firstPlayer: Player = 'X';
+    if (finalConfig.firstPlayer === 'random') {
+      firstPlayer = Math.random() < 0.5 ? 'X' : 'O';
+    } else if (finalConfig.firstPlayer === 'O') {
+      firstPlayer = 'O';
+    }
+
+    // En modo vs IA, el jugador siempre es X
+    if (mode === 'pvc') {
+      setPlayerSymbol('X');
+    }
+
+    const newGame: TicTacToeGameState = {
+      id: Date.now().toString(),
+      board: createEmptyBoard(size),
+      boardSize: size,
+      currentPlayer: firstPlayer,
+      gameMode: mode,
+      gameStatus: 'playing',
+      winner: null,
+      winningLine: null,
+      moves: [],
+      startTime: Date.now(),
+      pausedTime: 0,
+      isPaused: false,
+      config: finalConfig
+    };
+
+    setGameState(newGame);
+    setShowModeSelector(false);
+    setShowSizeSelector(false);
+    setTimeLeft(finalConfig.timerSeconds);
+  };
+
 
   const handleReset = () => {
     if (!gameState) return;
