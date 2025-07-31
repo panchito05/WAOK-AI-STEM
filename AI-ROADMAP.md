@@ -1,10 +1,11 @@
 # 🗺️ AI-ROADMAP - Hoja de Ruta de Desarrollo
 
+en los laberintos quiero hacer clic una sola vez con el mouse y que se quede selecionando eso evitar tener que mantener puldo el clic dunranto to el juego
+
 
 Prompt para Módulo de Laberintos Educativos
 
-  Basándome en el éxito del módulo Sudoku, aquí está el prompt completo y
-  detallado:
+  Basándome en el éxito del módulo Sudoku puede usarlo como referencia analizar su codigo primero para que ejecutes correctamente el siguente prompt ultra think de solution and planificacion:
 
   ---
   Quiero crear un módulo de "Laberinto Clásico" completamente aislado del         

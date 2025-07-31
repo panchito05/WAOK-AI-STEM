@@ -76,14 +76,37 @@ export function useCards() {
         timerSeconds: 0, // El módulo maneja su propio timer
       };
       
+      // Crear tarjeta TicTacToe predefinida si no existe
+      const tictactoeCard: PracticeCard = {
+        id: 'tictactoe-module',
+        type: 'module',
+        name: 'Tres en Línea',
+        topic: 'TicTacToe',
+        difficulty: 5,
+        customInstructions: 'Juego clásico de Tres en Línea. Juega contra un amigo o desafía a la computadora. Múltiples tamaños de tablero disponibles.',
+        exerciseCount: 0, // No aplica para módulos
+        attemptsPerExercise: 0, // No aplica para módulos
+        autoCompensation: false,
+        adaptiveDifficulty: false,
+        isFavorite: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        color: '#f59e0b', // Amber
+        icon: 'Trophy',
+        timerEnabled: true,
+        timerSeconds: 0, // El módulo maneja su propio timer
+      };
+      
       // Verificar si ya existen las tarjetas de módulos
       const hasSudokuCard = storedCards.some(card => card.id === 'sudoku-module');
       const hasMazeCard = storedCards.some(card => card.id === 'maze-module');
+      const hasTicTacToeCard = storedCards.some(card => card.id === 'tictactoe-module');
       
       // Combinar tarjetas almacenadas con módulos predefinidos
       let allCards = storedCards;
       if (!hasSudokuCard) allCards = [...allCards, sudokuCard];
       if (!hasMazeCard) allCards = [...allCards, mazeCard];
+      if (!hasTicTacToeCard) allCards = [...allCards, tictactoeCard];
       
       setCards(allCards);
       

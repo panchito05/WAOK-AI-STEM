@@ -9,9 +9,10 @@ import PracticeScreen from '@/components/PracticeScreen';
 import MultiPracticeScreen from '@/components/MultiPracticeScreen';
 import SudokuScreen from '@/components/sudoku/SudokuScreen';
 import { MazeScreen } from '@/components/maze/MazeScreen';
+import TicTacToeScreen from '@/components/tictactoe/TicTacToeScreen';
 import { PracticeCard } from '@/lib/storage';
 
-type ViewMode = 'list' | 'practice' | 'edit' | 'multi-practice' | 'sudoku' | 'maze';
+type ViewMode = 'list' | 'practice' | 'edit' | 'multi-practice' | 'sudoku' | 'maze' | 'tictactoe';
 
 export default function Home() {
   const searchParams = useSearchParams();
@@ -68,6 +69,8 @@ export default function Home() {
         setCurrentView('sudoku');
       } else if (card.id === 'maze-module') {
         setCurrentView('maze');
+      } else if (card.id === 'tictactoe-module') {
+        setCurrentView('tictactoe');
       }
     } else {
       setSelectedCard(card);
@@ -148,6 +151,12 @@ export default function Home() {
           
           {currentView === 'maze' && (
             <MazeScreen
+              onBack={handleBackToList}
+            />
+          )}
+          
+          {currentView === 'tictactoe' && (
+            <TicTacToeScreen
               onBack={handleBackToList}
             />
           )}
