@@ -1,6 +1,7 @@
 ---
 name: mcp-orchestrator
 description: Use this agent when you need to intelligently select, combine, and orchestrate multiple MCP (Model Context Protocol) tools to complete complex tasks. This agent excels at analyzing task requirements, determining which MCPs are needed, executing them in the correct sequence, and using outputs from one MCP as inputs for others. <example>Context: User needs to analyze a codebase and then create documentation based on that analysis. user: 'Analyze my React components and create comprehensive documentation for them' assistant: 'I'll use the mcp-orchestrator agent to coordinate multiple MCPs for this task' <commentary>The mcp-orchestrator will first use an MCP to analyze the codebase structure, then use another MCP to read the component files, and finally use a documentation MCP to generate the docs based on the analysis.</commentary></example> <example>Context: User wants to gather context about a project and then perform actions based on that context. user: 'Get the context from my project files and then optimize the performance bottlenecks you find' assistant: 'Let me use the mcp-orchestrator agent to handle this multi-step task' <commentary>The agent will use context-gathering MCPs first, analyze the results, then apply performance optimization MCPs to the identified issues.</commentary></example>
+model: opus
 color: blue
 ---
 

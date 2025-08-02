@@ -1,0 +1,58 @@
+# Archivos de Node
+node_modules
+.pnpm-store
+package-lock.json
+
+# Archivos de Next.js
+.next/cache
+.next/standalone
+.next/static
+
+# Archivos de desarrollo
+*.log
+*.md
+docs
+.git
+.gitignore
+.github
+
+# Archivos de prueba
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage
+.nyc_output
+
+# Archivos de configuración local
+.env.local
+.env.development
+.env.test
+.vscode
+.idea
+*.swp
+*.swo
+
+# Archivos de Firebase y Netlify
+firebase.json
+.firebaserc
+netlify.toml
+netlify
+
+# Archivos de Claude
+.claude
+CLAUDE.md
+
+# Archivos temporales
+tmp
+temp
+dist
+build
+
+# Archivos grandes innecesarios
+public/videos
+public/sounds
+*.mp4
+*.mov
+*.avi

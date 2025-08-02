@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: waok-ai-stem
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build:netlify
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18.18.0
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false
+    autoDeploy: false
+    healthCheckPath: /

@@ -183,14 +183,68 @@ When migrating to GenAI Processors:
 
 ## Deployment Information
 
-### Current Deployment Platform: Netlify
+### Multi-Platform Deployment Status (Updated: 2025-08-02)
 
-The application is currently deployed on Netlify with the following configuration:
+The application has been successfully deployed across multiple platforms for maximum availability and redundancy:
 
-#### Production URLs
+### 🌐 PRODUCTION URLS
+
+#### 1. Netlify ✅ (Primary)
 - **Main URL**: https://waok-ai-stem.netlify.app
-- **Deploy URL**: https://688055b5ceefc9b3de59b5f5--waok-ai-stem.netlify.app
+- **Latest Deploy**: https://688e3b57cb2b7f8d2c81e5d8--waok-ai-stem.netlify.app
 - **Admin Panel**: https://app.netlify.com/projects/waok-ai-stem
+- **Status**: ✅ LIVE & ACTIVE
+- **Deploy ID**: 688e3b57cb2b7f8d2c81e5d8
+- **Build Time**: 125 seconds
+- **Functions**: 7 serverless functions deployed
+
+#### 2. Vercel ✅ 
+- **Main URL**: https://waok-ai-stem.vercel.app
+- **Latest Deploy**: https://waok-ai-stem-8h233oh9c-panchito05s-projects.vercel.app
+- **Project URL**: https://vercel.com/panchito05s-projects/waok-ai-stem
+- **Status**: ✅ LIVE & ACTIVE
+- **Deploy Time**: 2m 30s
+- **Region**: Washington D.C. (iad1)
+- **Framework**: Next.js 15.3.3
+
+#### 3. Google Cloud Run 🔧 (Ready to Deploy)
+- **Configuration**: Docker + Cloud Build ready
+- **Files Created**:
+  - `Dockerfile` - Multi-stage build optimized
+  - `cloudbuild.yaml` - CI/CD pipeline configured
+  - `.dockerignore` - Optimized image size
+- **Deployment Command**: 
+  ```bash
+  gcloud run deploy waok-ai-stem \
+    --source . \
+    --region us-central1 \
+    --allow-unauthenticated
+  ```
+- **Expected URL**: https://waok-ai-stem-[hash]-uc.a.run.app
+
+#### 4. Firebase Hosting 🔧 (Configuration Ready)
+- **Project**: waok-ai-stem (App Hosting configured)
+- **Configuration**: `firebase.json` with framework backend
+- **Backend ID**: waok-ai-stem
+- **Region**: us-east1
+- **Deployment Command**: `firebase deploy --only hosting`
+
+#### 5. Render.com 🔧 (Ready to Deploy)
+- **Configuration**: `render.yaml` created
+- **Plan**: Free tier available
+- **Region**: Oregon (us-west)
+- **Deployment**: Connect GitHub repo at render.com
+- **Expected URL**: https://waok-ai-stem.onrender.com
+
+#### 6. Railway.app 🔧 (Ready to Deploy)
+- **Configuration**: `railway.toml` created
+- **Builder**: Nixpacks
+- **Deployment**: Connect GitHub repo at railway.app
+- **Expected URL**: https://waok-ai-stem.up.railway.app
+
+### Current Primary Deployment Platform: Netlify
+
+The application is primarily deployed on Netlify with the following configuration:
 
 #### Deployment Details
 - **Site ID**: 44dfe813-0fd0-4097-9841-73ed7b0c07b7
@@ -225,6 +279,35 @@ The application is currently deployed on Netlify with the following configuratio
 4. Created API client for frontend communication
 5. Updated all components to use API client instead of server actions
 6. Deployed using Netlify MCP tools
+
+### Deployment Commands Summary
+
+```bash
+# Netlify (ya desplegado - actualizar con push a GitHub)
+git push origin main
+
+# Vercel (ya desplegado - actualizar)
+vercel --prod
+
+# Google Cloud Run (requiere gcloud CLI)
+gcloud run deploy waok-ai-stem --source . --region us-central1
+
+# Firebase Hosting (requiere autenticación)
+firebase deploy --only hosting
+
+# Render.com (conectar repo en dashboard)
+# https://dashboard.render.com/new/web
+
+# Railway (conectar repo en dashboard)  
+# https://railway.app/new
+```
+
+### Environment Variables Required
+
+All platforms need:
+- `GEMINI_API_KEY`: Your Google Gemini API key
+- `NODE_ENV`: production
+- `PORT`: (platform-specific, usually auto-configured)
 
 For detailed deployment instructions, see [NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md)
 
