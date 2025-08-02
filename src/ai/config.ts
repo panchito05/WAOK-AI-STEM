@@ -1,18 +1,9 @@
 // Configuration for AI services with Netlify Functions support
 
 export const getGeminiApiKey = (): string => {
-  // For Netlify Functions context
-  if (typeof Netlify !== 'undefined' && Netlify?.env?.get) {
-    const netlifyKey = Netlify.env.get('GEMINI_API_KEY');
-    if (netlifyKey) {
-      console.log('[AI Config] Using Netlify.env for API key');
-      return netlifyKey;
-    }
-  }
-  
-  // For Next.js server context
+  // For Netlify Functions - environment variables are available in process.env
   if (process.env.GEMINI_API_KEY) {
-    console.log('[AI Config] Using process.env for API key');
+    console.log('[AI Config] Using process.env for API key (Netlify Functions)');
     return process.env.GEMINI_API_KEY;
   }
   
@@ -29,10 +20,10 @@ export const getGeminiApiKey = (): string => {
 // Export for debugging
 export const debugEnvironment = () => {
   console.log('[AI Config] Environment debug:', {
-    hasNetlify: typeof Netlify !== 'undefined',
-    hasNetlifyEnv: typeof Netlify !== 'undefined' && !!Netlify?.env,
     hasProcessEnv: !!process.env.GEMINI_API_KEY,
+    hasNextPublicEnv: !!process.env.NEXT_PUBLIC_GEMINI_API_KEY,
     nodeEnv: process.env.NODE_ENV,
+    apiKeyLength: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0,
     timestamp: new Date().toISOString()
   });
 };
