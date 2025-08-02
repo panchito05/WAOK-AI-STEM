@@ -1,45 +1,27 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Use the official Node.js image
+FROM node:20-alpine
 
+# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production && \
-    npm install --save-dev typescript @types/node @types/react
+RUN npm ci --only=production
 
-# Copy source code
+# Copy the rest of the application
 COPY . .
 
-# Set build environment
-ENV NEXT_TELEMETRY_DISABLED=1
+# Build the Next.js application
+RUN npm run build
+
+# Expose the port
+EXPOSE 3000
+
+# Set environment to production
 ENV NODE_ENV=production
+ENV PORT=3000
 
-# Build the application
-RUN npm run build:netlify
-
-# Runtime stage
-FROM node:18-alpine AS runner
-
-WORKDIR /app
-
-# Copy necessary files from builder
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/next.config.ts ./next.config.ts
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-
-# Set runtime environment
-ENV NODE_ENV=production
-ENV PORT=8080
-ENV HOSTNAME=0.0.0.0
-
-EXPOSE 8080
-
-# Run the application
+# Start the application
 CMD ["npm", "start"]
